@@ -1,0 +1,9 @@
+[submodule "wordpress"]
+	path = wordpress
+	url = https://github.com/WordPress/wordpress-develop.git
+[submodule "gutenberg"]
+	path = gutenberg
+	url = https://github.com/WordPress/gutenberg.git
+[submodule "woocommerce"]
+	path = woocommerce
+	url = https://github.com/woocommerce/woocommerce.git
