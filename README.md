@@ -38,10 +38,46 @@ The branch comparison is the core demo:
 2. Run the same task against `ce` and measure context quality, lookup effort,
    token use, and answer correctness.
 
-## Current Status
+## Source Constellation
 
-This repo is being built spec-first. Start with the files in [specs](./specs/)
-before adding source submodules or CE configuration.
+This branch pins the source repositories as git submodules. The dates below are
+the upstream commit dates at the time the baseline was created.
+
+| Path | Upstream | Pinned commit | Date | Why it is included |
+| --- | --- | --- | --- | --- |
+| `wordpress/` | `https://github.com/WordPress/wordpress-develop.git` | `5a96ff4d54a97955b02ac3c20f3ae7f21185232f` | 2026-05-17 | WordPress core APIs, REST controllers, hooks, block server behavior, and tests. |
+| `gutenberg/` | `https://github.com/WordPress/gutenberg.git` | `a37545b9299d4dbbd8c3d332f7e109da5a6d5d24` | 2026-05-18 | Editor packages, block registration behavior, React UI, data stores, and serialization logic. |
+| `woocommerce/` | `https://github.com/woocommerce/woocommerce.git` | `75675a3fe976ef45d503de4d4c9d2cf5b48a79f1` | 2026-05-18 | Commerce domain flows, checkout blocks, Store API, product data, and extension points. |
+
+## Getting Started
+
+Clone with submodules:
+
+```sh
+git clone --recurse-submodules git@github.com:atheory-ai/ce-demo-wordpress.git
+```
+
+If you already cloned the repository:
+
+```sh
+git submodule update --init --recursive
+```
+
+This branch does not require running WordPress, Gutenberg, or WooCommerce. The
+first demo is source-understanding only.
+
+## Running The Baseline
+
+Use the materials in [demo](./demo/) to run no-CE control sessions:
+
+1. Pick a task from [demo/tasks](./demo/tasks/).
+2. Start with [demo/prompts/baseline-agent-prompt.md](./demo/prompts/baseline-agent-prompt.md).
+3. Record context-ready time, lookup actions, files inspected, token estimates,
+   and answer quality using [demo/report-template.md](./demo/report-template.md).
+4. Summarize publishable observations in [demo/baseline-notes.md](./demo/baseline-notes.md).
+
+The `ce` branch will later add CE config, scripted queries, Studio flows, and
+Skillex skills for paired comparisons against these same tasks.
 
 ## Spec Index
 
