@@ -18,11 +18,15 @@ benchmark is source understanding.
 ## Required CE Workflow
 
 Use Context Engine for codebase understanding. Do not use broad filesystem
-discovery as the way to learn the source tree.
+discovery as the way to learn the source tree. Run CE from this repository root
+so project detection, config loading, and relative paths all refer to the demo
+project.
 
 - Start from a fresh agent with no context copied from a baseline run.
 - Give the agent only this repo path and one task from `demo/tasks/`.
-- Use CE queries and CE source references before inspecting source files.
+- Use the CE harness/integration and CE source references before inspecting
+  source files. Prefer lightweight graph/source tools when available; use
+  AI-powered CE query only when the benchmark explicitly calls for it.
 - Use `rg`, `find`, `ls`, and broad file reads only to diagnose CE setup
   failure, not to perform the investigation.
 - After CE cites a specific file, narrowly read the cited file or nearby range
@@ -31,22 +35,32 @@ discovery as the way to learn the source tree.
   indexed graph, or cannot produce useful source references, stop and report a
   CE release blocker.
 
-Recommended local commands:
+Recommended local setup:
 
 ```bash
+ce --config ./ce.yaml project init
+
 ce --config ./ce.yaml index . --full \
   --exclude '**/.git/**' \
   --exclude '**/node_modules/**' \
   --exclude '**/vendor/**' \
   --exclude '**/build/**' \
   --exclude '**/dist/**'
-
-ce --config ./ce.yaml query "Investigate the selected benchmark task and cite the relevant source paths."
 ```
 
 When using a local development binary, replace `ce` with the explicit binary
-path and pass the same `--config ./ce.yaml` and `--data-dir` values for both
-`index` and `query`.
+path and pass the same `--config ./ce.yaml` and `--data-dir` values for all CE
+commands and harness configuration. Local development binaries do not embed
+release plugin artifacts, so copy the SDK-built default plugins into the data
+directory before indexing:
+
+```bash
+mkdir -p "$CE_DATA_DIR/plugins/defaults"
+cp /path/to/ce-plugin-sdk/plugins/go-language/dist/go-language.wasm "$CE_DATA_DIR/plugins/defaults/"
+cp /path/to/ce-plugin-sdk/plugins/typescript-language/dist/typescript.wasm "$CE_DATA_DIR/plugins/defaults/"
+cp /path/to/ce-plugin-sdk/plugins/python-language/dist/python.wasm "$CE_DATA_DIR/plugins/defaults/"
+cp /path/to/ce-plugin-sdk/plugins/php-language/dist/php.wasm "$CE_DATA_DIR/plugins/defaults/"
+```
 
 ## Measurement
 
