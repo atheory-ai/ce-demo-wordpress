@@ -1,0 +1,16 @@
+# ce.yaml - Context Engine project configuration
+# Reference: https://docs.atheory.ai/ce/config
+
+llm:
+  provider: local
+project:
+  arch_prompt: |-
+    Compare WordPress core, Gutenberg, and WooCommerce source relationships without requiring a running WordPress instance.
+    Exclude generated dependencies, caches, and build outputs from benchmark indexing.
+  base_prompt: |-
+    WordPress ecosystem benchmark repo containing WordPress core, Gutenberg, and WooCommerce submodules for CE comparison testing.
+
+    Source constellation used to evaluate context acquisition across PHP, TypeScript, REST APIs, block registration, WooCommerce checkout, and product rendering flows.
+
+    Benchmark branches compare baseline file-search agents against CE-assisted agents on the same source tasks.
+  git_url: git@github.com:atheory-ai/ce-demo-wordpress.git
