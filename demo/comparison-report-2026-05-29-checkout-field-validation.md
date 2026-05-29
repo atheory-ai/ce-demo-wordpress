@@ -46,6 +46,79 @@ Indexing time is setup overhead, not context-acquisition time.
 | Unsupported-claim risk | Low for main path, medium for classic parity | Low for PHP/server path, medium for exact client UI validation | Tie |
 | Overall demo impact | Fast and effective with broad search | More constrained and graph-guided, but slower/noisier | Mixed |
 
+## Correctness-First Comparison
+
+The most important question is not whether CE was faster. It is whether CE found
+source context that broad search missed, or avoided a subtle but important
+mistake.
+
+On this task, the answer is mixed:
+
+- CE did find some useful context the baseline did not cite.
+- The baseline was not materially wrong.
+- The baseline was somewhat incomplete around schema-based validation and draft
+  update behavior.
+- CE's answer was slightly deeper and more internally connected, but not enough
+  to turn this single run into a strong correctness win.
+
+Context CE surfaced that the baseline did not cite:
+
+- `CheckoutFieldsSchema/Validation.php`, which owns schema-based conditional
+  required/hidden/validation behavior.
+- `client/blocks/assets/js/settings/blocks/constants.ts`, which maps checkout
+  field locations into form key groups consumed by the React checkout UI.
+- `client/blocks/assets/js/data/checkout/push-changes.ts`, which shows draft
+  updates skip fields with validation errors before PUT persistence.
+- The distinction that both draft updates and final place-order flows matter:
+  PUT/PATCH-style draft persistence and POST place-order both interact with
+  validation/persistence, but through different paths.
+
+Context the baseline surfaced that CE did not emphasize as strongly:
+
+- `AbstractAddressSchema.php`, which is important for address-location custom
+  fields.
+- `OrderController.php`, especially final order validation and update hooks.
+
+Important correctness assessment:
+
+- The baseline correctly identified the public API,
+  `woocommerce_register_additional_checkout_field()`, and the central
+  `CheckoutFields` service.
+- The baseline correctly found the React contact/order rendering path and Store
+  API `/checkout` submission.
+- The baseline correctly found that server-side validation and persistence split
+  across schema, route, order controller, and checkout trait code.
+- The baseline did not make an obvious wrong claim.
+
+Where CE improved correctness/depth:
+
+- CE better connected field registration to frontend field location constants.
+- CE better identified schema-based validation as a separate implementation
+  layer, not just callback/hook validation.
+- CE better identified draft update behavior and client-side validation gating.
+
+Where CE still fell short:
+
+- CE did not fully trace the generic `Form` component or schema-parser client
+  implementation.
+- CE did not clearly outperform baseline on the address-field path because the
+  baseline found `AbstractAddressSchema.php`.
+- CE needed too many search attempts to arrive at the deeper context.
+
+Correctness conclusion:
+
+CE improved depth, but did not reveal a baseline-breaking omission. The strongest
+claim supported by this run is:
+
+> CE found additional validation and draft-update context that makes the final
+> answer more complete, while baseline broad search was already accurate enough
+> for a good implementation plan.
+
+This is useful engineering feedback but not yet a compelling public demo. A more
+compelling correctness demo would use a task where broad search finds the obvious
+entry points but misses an indirect cross-language or cross-repository path that
+CE reliably surfaces.
+
 ## Baseline Run
 
 Elapsed wall-clock estimate: `2m16s`, from `10:10:45` to `10:13:01 PDT`.
@@ -217,4 +290,3 @@ friction:
 - direct reference/call/context tools exposed through the harness, not just
   substring search
 - avoid locked-DB failures during read-only benchmark use
-
