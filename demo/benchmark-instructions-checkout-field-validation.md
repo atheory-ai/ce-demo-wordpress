@@ -63,15 +63,20 @@ Required:
 
 - run from the CE worktree root
 - use the configured CE data directory and CE binary supplied by the operator
-- use CE/harness outputs before source reads
-- avoid broad `rg`, `find`, `ls`, and broad file reads for investigation
-- read only files or narrow ranges that CE surfaces
+- use CE/harness outputs for discovery and navigation before source reads
+- avoid broad `rg`, `find`, `ls`, shell search, and bulk file reads for
+  investigation
+- after CE identifies a specific file, symbol, method, reference, call path, or
+  source range, inspect that narrow source; every manual read must be traceable
+  to a CE result
+- use source text for detailed reasoning after CE has narrowed the target
 - if CE fails to index, query, search, or surface useful references, stop and
   report a CE blocker instead of completing the task with broad source search
 
 Allowed:
 
-- narrow file reads for CE-cited paths
+- narrow file reads for CE-cited paths, symbols, methods, references, call paths,
+  or source ranges
 - setup checks needed to confirm CE data/plugin availability
 
 Stop condition:
@@ -97,4 +102,3 @@ Compare the two reports on:
 Do not claim CE is better unless the CE-assisted run is valid and shows a
 measurable improvement in at least one of speed, request volume, source
 coverage, relationship accuracy, missed context, or plan quality.
-

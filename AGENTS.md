@@ -24,13 +24,20 @@ project.
 
 - Start from a fresh agent with no context copied from a baseline run.
 - Give the agent only this repo path and one task from `demo/tasks/`.
-- Use the CE harness/integration and CE source references before inspecting
-  source files. Prefer lightweight graph/source tools when available; use
-  AI-powered CE query only when the benchmark explicitly calls for it.
-- Use `rg`, `find`, `ls`, and broad file reads only to diagnose CE setup
-  failure, not to perform the investigation.
-- After CE cites a specific file, narrowly read the cited file or nearby range
-  only to verify exact implementation details.
+- Use the CE harness/integration, graph/source tools, references, callgraph,
+  summaries, and file-context results for discovery and navigation. Prefer
+  lightweight deterministic CE tools when available; use AI-powered CE query
+  when the benchmark calls for deeper synthesis.
+- Do not use `rg`, `find`, `ls`, broad shell search, or bulk file reads to
+  discover relevant code when CE is available.
+- After CE identifies a specific file, symbol, method, reference, call path, or
+  source range, narrowly inspect that source. This is allowed and expected; the
+  file read must be traceable to a CE result.
+- Use source text for detailed reasoning after CE has narrowed the target. AST
+  and graph structure are for finding and ranking; exact code is often the best
+  evidence for conditionals, hooks, ordering, comments, and edge cases.
+- Use shell search only to diagnose CE setup failure or verify that a CE-cited
+  path exists, not to perform the investigation.
 - If CE indexes zero files, cannot load language plugins, cannot query the
   indexed graph, or cannot produce useful source references, stop and report a
   CE release blocker.

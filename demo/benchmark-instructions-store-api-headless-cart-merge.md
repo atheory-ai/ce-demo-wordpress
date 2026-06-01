@@ -1,21 +1,27 @@
-# Benchmark Instructions: Zero-Cost Renewal Draft Order Regression
+# Benchmark Instructions: Store API Headless Cart Merge Regression
 
 ## Goal
 
 Compare how well a fresh AI agent understands an arcane real WooCommerce issue
 without Context Engine versus with Context Engine.
 
-Task: `demo/tasks/06-zero-cost-renewal-draft-order.md`
+Task: `demo/tasks/07-store-api-headless-cart-merge.md`
 
-Primary scoring is correctness:
+Primary scoring is correctness and depth. Time, request count, and file count
+must be recorded, but they are telemetry rather than weighted performance
+metrics unless they are so extreme that the task becomes impractical.
 
-- Does the agent identify the actual draft-order selection/reuse path?
-- Does it avoid overfitting to the reporter's suggested `needs_payment()` fix?
+Score whether CE improves investigation quality:
+
+- Does the agent identify the actual Store API cart/session/auth flow?
+- Does it avoid treating `wp_set_current_user()` as the fix without explaining
+  why that changes behavior?
 - Does it find non-obvious related files and tests?
-- Does it distinguish Store API behavior from broad order-status semantics?
-- Does it produce a safe, source-backed fix strategy?
+- Does it distinguish authentication from login/session side effects?
+- Does it produce a safe, source-backed fix strategy for headless Store API
+  consumers?
 
-Secondary measurements:
+Telemetry to record:
 
 - time to context-ready
 - broad lookup/search requests
@@ -84,11 +90,12 @@ Stop condition:
 
 Prefer the answer that:
 
-- identifies the most specific source path
-- rejects unsafe broad semantic changes when appropriate
-- names the right test surface
+- identifies the most specific Store API request/bootstrap path
+- explains how cart token, nonce, current user, and cart session state interact
+- rejects unsafe broad auth or session changes when appropriate
+- names the right PHP and Store API test surfaces
 - distinguishes symptom from root cause
-- explains uncertainty and risk clearly
+- explains uncertainty and runtime-reproduction risk clearly
 
 Do not claim CE wins because it is faster. Claim CE wins only if it produces a
 more correct, deeper, or safer diagnosis.

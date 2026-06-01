@@ -14,6 +14,9 @@
 
 - Context-ready time:
 - Lookup actions:
+- Broad discovery actions:
+- CE requests:
+- Narrow CE-cited source reads:
 - Approximate prompt/input tokens:
 - Approximate output tokens:
 - Source files inspected:
@@ -36,3 +39,5 @@
 - Where did it get stuck?
 - Which cross-repository relationship was hardest to recover?
 - Which files or APIs should the CE branch surface faster?
+- For CE-assisted runs, were all manual source reads traceable to CE-cited
+  files, symbols, methods, references, call paths, or source ranges?
