@@ -25,9 +25,9 @@ project.
 - Start from a fresh agent with no context copied from a baseline run.
 - Give the agent only this repo path and one task from `demo/tasks/`.
 - Use the CE harness/integration, graph/source tools, references, callgraph,
-  summaries, and file-context results for discovery and navigation. Prefer
-  lightweight deterministic CE tools when available; use AI-powered CE query
-  when the benchmark calls for deeper synthesis.
+  summaries, concepts, and file-context results for discovery and navigation.
+  CE v1 benchmark runs should use deterministic CE tools rather than
+  experimental `ce_query`.
 - Do not use `rg`, `find`, `ls`, broad shell search, or bulk file reads to
   discover relevant code when CE is available.
 - After CE identifies a specific file, symbol, method, reference, call path, or
@@ -71,18 +71,26 @@ cp /path/to/ce-plugin-sdk/plugins/php-language/dist/php.wasm "$CE_DATA_DIR/plugi
 
 ## Measurement
 
-Record:
+Record telemetry:
 - one-time CE indexing cost
-- CE query count
-- repeated CE query latency
+- CE tool request count
+- repeated CE tool latency
 - narrow verification reads performed after CE citations
 - any broad lookup commands used only for CE failure diagnosis
 - files cited
 - relationships found across WordPress, Gutenberg, and WooCommerce
-- missed expected context
 - unsupported claims
-- final plan quality
+
+Primary scoring is correctness:
+- subtle or major facts CE found that the baseline missed
+- subtle or major facts the baseline found that CE missed
+- false causal explanations avoided by either run
+- important source relationships recovered by either run
+- critical files, symbols, hooks, or tests missed by either run
+- final answer depth, accuracy, and safe implementation quality
 
 Do not claim a CE improvement unless a paired baseline run on the same source
-commit shows a measurable difference in context acquisition time, lookup
-volume, relationship accuracy, source coverage, missed context, or plan quality.
+commit shows a measurable difference in correctness, depth, relationship
+accuracy, source coverage, missed context, or plan quality. Time and request
+count are useful diagnostics, but do not outweigh correctness unless the CE path
+is so slow or noisy that the task becomes impractical.

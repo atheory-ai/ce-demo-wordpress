@@ -14,12 +14,14 @@ Primary scoring is correctness:
 - Does it find non-obvious related files and tests?
 - Does it distinguish Store API behavior from broad order-status semantics?
 - Does it produce a safe, source-backed fix strategy?
+- Most importantly: does CE catch subtle or major source facts that the baseline
+  misses, or prevent a plausible but wrong baseline explanation?
 
 Secondary measurements:
 
 - time to context-ready
 - broad lookup/search requests
-- CE/harness requests
+- CE tool/harness requests
 - files read
 - files cited
 - missed critical context
@@ -89,6 +91,15 @@ Prefer the answer that:
 - names the right test surface
 - distinguishes symptom from root cause
 - explains uncertainty and risk clearly
+- explicitly names what it found that the other run missed
 
 Do not claim CE wins because it is faster. Claim CE wins only if it produces a
-more correct, deeper, or safer diagnosis.
+more correct, deeper, or safer diagnosis. The comparison report must include a
+`Correctness Delta` section listing:
+
+- major facts caught only by CE
+- subtle facts caught only by CE
+- major facts caught only by baseline
+- subtle facts caught only by baseline
+- incorrect or unsupported claims in either answer
+- whether the CE-only findings materially improve the final diagnosis or fix

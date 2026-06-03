@@ -13,7 +13,7 @@ Measure:
 
 - elapsed time to context-ready
 - number of broad lookup/search requests
-- number of CE/harness requests
+- number of CE tool/harness requests
 - files read
 - files cited
 - depth of relationship understanding
@@ -21,6 +21,8 @@ Measure:
 - missed critical context
 - unsupported or weak claims
 - quality of the final implementation/investigation plan
+- subtle or major source facts CE catches that the baseline misses, and subtle
+  or major source facts the baseline catches that CE misses
 
 Indexing time is setup overhead. Record it separately, but do not treat it as
 the agent's context-acquisition time.
@@ -87,18 +89,31 @@ Stop condition:
   files read/cited, relationships found, likely missed context,
   unsupported-claim risk, and a concise source-cited plan
 
-## Comparison
+## Correctness Comparison
 
 Compare the two reports on:
 
-- speed to context-ready
-- request/action count
 - source coverage
 - cross-file and cross-language relationship accuracy
 - missed critical context
+- subtle facts caught by only one run
+- major facts caught by only one run
 - unsupported claims
 - plan quality
 
+Record speed to context-ready and request/action count as telemetry. Do not
+weight them above correctness unless one path is so slow or noisy that the task
+becomes impractical.
+
 Do not claim CE is better unless the CE-assisted run is valid and shows a
-measurable improvement in at least one of speed, request volume, source
-coverage, relationship accuracy, missed context, or plan quality.
+measurable improvement in source coverage, relationship accuracy, missed
+context, subtle source facts caught, major source facts caught, unsupported
+claims avoided, or plan quality. The comparison report must include a
+`Correctness Delta` section listing:
+
+- major facts caught only by CE
+- subtle facts caught only by CE
+- major facts caught only by baseline
+- subtle facts caught only by baseline
+- incorrect or unsupported claims in either answer
+- whether the CE-only findings materially improve the final diagnosis or plan
