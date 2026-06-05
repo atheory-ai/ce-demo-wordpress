@@ -1,0 +1,27 @@
+name: Demo Contract
+
+on:
+  pull_request:
+    branches:
+      - main
+      - ce
+  push:
+    branches:
+      - main
+      - ce
+  workflow_dispatch:
+
+jobs:
+  contract:
+    name: Branch contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Validate demo contract
+        run: scripts/check-demo-contract.sh
