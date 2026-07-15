@@ -14,3 +14,11 @@ project:
 
     Benchmark branches compare baseline file-search agents against CE-assisted agents on the same source tasks.
   git_url: git@github.com:atheory-ai/ce-demo-wordpress.git
+
+plugins:
+  installed:
+    # Build these demo-owned artifacts first: `cd plugins && pnpm install && pnpm build`.
+    # PHP Language supplies the CST parser; the convention plugin adds WordPress
+    # and WooCommerce facts from that same parsed tree.
+    - path: ./plugins/php-language/dist/php-language.wasm
+    - path: ./plugins/wordpress-conventions/dist/wordpress-conventions.wasm

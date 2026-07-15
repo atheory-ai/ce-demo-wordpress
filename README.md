@@ -8,10 +8,9 @@ extension-heavy software. The intended source set is WordPress core, Gutenberg,
 WooCommerce, and optional additional plugin repositories when a demo scenario
 needs more domain complexity.
 
-This `main` branch is the baseline branch. It represents the large project
-without Context Engine configuration. The future `ce` branch will contain the
-same source constellation plus CE config, repeatable indexing fixtures, scripted
-queries, Studio walkthroughs, and Skillex skills.
+This `ce` branch is the Context Engine comparison branch. It keeps the same
+source constellation as `main`, then adds CE configuration, a demo-owned PHP
+language plugin, and a WordPress/WooCommerce convention plugin.
 
 ## What This Demo Should Prove
 
@@ -30,7 +29,7 @@ help agents:
 | Branch | Purpose |
 | --- | --- |
 | `main` | Source-only baseline. No CE config, no CE fixtures, no Skillex augmentation. |
-| `ce` | CE-equipped branch with indexing config, scripted queries, Studio flow, and Skillex skills. |
+| `ce` | CE-equipped branch. Currently includes PHP structural indexing and WordPress/WooCommerce convention facts; IIR verification remains a planned capability. |
 
 The branch comparison is the core demo:
 
@@ -66,6 +65,49 @@ git submodule update --init --recursive
 This branch does not require running WordPress, Gutenberg, or WooCommerce. The
 first demo is source-understanding only.
 
+## CE Plugin Build And Fixture Check
+
+The CE branch currently provides two additive PHP plugins:
+
+- `plugins/php-language` parses PHP and emits structural file, namespace,
+  class, method, function, and import facts.
+- `plugins/wordpress-conventions` emits CST-grounded facts for hooks, REST
+  routes, and block registration. It does not claim runtime behavior or PHP IIR
+  verification coverage.
+
+Prerequisites are Node 22+, pnpm, Go, and Zig 0.13.x. The grammar must use the
+tree-sitter corpus pinned by CE (`github.com/malivvan/tree-sitter@v0.0.1`), whose
+PHP grammar has language ABI 14. Newer upstream PHP grammars currently emit ABI
+15 and are incompatible with CE's embedded tree-sitter core.
+
+The current SDK repository is archived. Until its grammar-manifest fix is
+published, this demo expects the sibling local SDK checkout containing that fix
+(tracked by [CE issue #94](https://github.com/atheory-ai/context-engine/issues/94)).
+
+```sh
+cd plugins
+pnpm install
+TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.0.1/src" \
+  ZIG=/path/to/zig-0.13 \
+  pnpm --filter php-language-plugin run build:grammar
+pnpm test
+pnpm build
+```
+
+Validate the smallest end-to-end fixture before indexing the source
+constellation. With a local CE checkout, build `ce` with `CGO_ENABLED=0` and
+then run:
+
+```sh
+mkdir -p /tmp/ce-wordpress-demo-data
+/path/to/ce --config ./ce.yaml --data-dir /tmp/ce-wordpress-demo-data \
+  index demo/fixtures/php-iir --full
+```
+
+The expected result is one indexed file with structural plus convention facts
+(currently 11 nodes and 10 edges). This is a regression harness, not a benchmark
+result. CE defects found through this check are tracked in issues #95–#98.
+
 ## Running The Baseline
 
 Use the materials in [demo](./demo/) to run no-CE control sessions:
@@ -76,8 +118,9 @@ Use the materials in [demo](./demo/) to run no-CE control sessions:
    and answer quality using [demo/report-template.md](./demo/report-template.md).
 4. Summarize publishable observations in [demo/baseline-notes.md](./demo/baseline-notes.md).
 
-The `ce` branch will later add CE config, scripted queries, Studio flows, and
-Skillex skills for paired comparisons against these same tasks.
+The CE branch already has `ce.yaml` and the plugin fixture above. Scripted
+semantic queries, Studio flows, Skillex comparison, and PHP IIR verification
+remain planned work; see [specs/11-IIR-DEMO-UPGRADE-OVERVIEW.md](./specs/11-IIR-DEMO-UPGRADE-OVERVIEW.md).
 
 ## Spec Index
 

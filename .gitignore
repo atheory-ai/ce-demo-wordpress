@@ -1,3 +1,6 @@
 .DS_Store
 demo/runs/
 demo/reports/
+plugins/node_modules/
+plugins/*/node_modules/
+plugins/*/dist/

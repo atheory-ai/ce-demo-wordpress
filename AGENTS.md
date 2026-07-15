@@ -10,6 +10,8 @@ demo repository. Use CE to understand the codebase.
 - `demo/tasks/` - benchmark tasks
 - `demo/report-template.md` - run report template
 - `specs/` - benchmark design notes
+- `plugins/php-language/` - demo-owned structural PHP plugin
+- `plugins/wordpress-conventions/` - additive WordPress/WooCommerce facts
 
 Do not require a running WordPress site, database, browser, PHP server, or Node
 dev server unless a task explicitly asks for runtime validation. The primary
@@ -45,29 +47,28 @@ project.
 Recommended local setup:
 
 ```bash
-ce --config ./ce.yaml project init
-
-ce --config ./ce.yaml index . --full \
-  --exclude '**/.git/**' \
-  --exclude '**/node_modules/**' \
-  --exclude '**/vendor/**' \
-  --exclude '**/build/**' \
-  --exclude '**/dist/**'
+cd plugins
+pnpm install
+TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.0.1/src" \
+  ZIG=/path/to/zig-0.13 \
+  pnpm --filter php-language-plugin run build:grammar
+pnpm test && pnpm build
 ```
 
-When using a local development binary, replace `ce` with the explicit binary
-path and pass the same `--config ./ce.yaml` and `--data-dir` values for all CE
-commands and harness configuration. Local development binaries do not embed
-release plugin artifacts, so copy the SDK-built default plugins into the data
-directory before indexing:
+Run the small fixture before the corpus. It must report one indexed file with
+both structural and convention facts (currently 11 nodes, 10 edges), and no
+write-buffer warnings:
 
 ```bash
-mkdir -p "$CE_DATA_DIR/plugins/defaults"
-cp /path/to/ce-plugin-sdk/plugins/go-language/dist/go-language.wasm "$CE_DATA_DIR/plugins/defaults/"
-cp /path/to/ce-plugin-sdk/plugins/typescript-language/dist/typescript.wasm "$CE_DATA_DIR/plugins/defaults/"
-cp /path/to/ce-plugin-sdk/plugins/python-language/dist/python.wasm "$CE_DATA_DIR/plugins/defaults/"
-cp /path/to/ce-plugin-sdk/plugins/php-language/dist/php.wasm "$CE_DATA_DIR/plugins/defaults/"
+mkdir -p /tmp/ce-wordpress-demo-data
+/path/to/ce --config ./ce.yaml --data-dir /tmp/ce-wordpress-demo-data \
+  index demo/fixtures/php-iir --full
 ```
+
+Use Zig 0.13.x and the CE-pinned tree-sitter corpus only. The grammar source
+and toolchain requirements are recorded in `plugins/php-language/grammar.lock`.
+The local SDK must include the grammar-manifest fix tracked in CE issue #94;
+do not claim a published SDK bundle provides PHP support yet.
 
 ## Measurement
 

@@ -1,0 +1,16 @@
+{
+  "name": "atheory-ce-demo-wordpress-plugins",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean"
+  },
+  "devDependencies": {
+    "@atheory-ai/ce-plugin-sdk": "file:../../ce-plugin-sdk/packages/plugin-sdk",
+    "@atheory-ai/wasm-plugin-toolkit": "^0.0.4",
+    "typescript": "^5.0.0",
+    "vitest": "^1.6.1"
+  },
+  "packageManager": "pnpm@10.33.2"
+}
