@@ -7,8 +7,15 @@ inputs:
 returns:
   type: void
 behavior:
-  - when: entityKey is empty
+  - when: entityKey === ""
     then: throw invalid_entity_key
+    whenExpr:
+      op: "==="
+      args:
+        - op: path
+          text: entityKey
+        - op: lit
+          text: '""'
 sideEffects:
   - cache.invalidate
 failureModes:

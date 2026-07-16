@@ -22,9 +22,12 @@ benchmark is source understanding.
 Use Context Engine for codebase understanding. Do not use broad filesystem
 discovery as the way to learn the source tree. Run CE from this repository root
 so project detection, config loading, and relative paths all refer to the demo
-project. For a procedural guide, query the local Skillex skills first:
+project. For a **CE + Skillex** comparison, bootstrap the local Skillex registry
+once in a fresh clone, then query the relevant skills. Do not load Skillex in a
+CE-only comparison.
 
 ```bash
+scripts/skillex-refresh.sh
 skillex query --path AGENTS.md --format content
 ```
 

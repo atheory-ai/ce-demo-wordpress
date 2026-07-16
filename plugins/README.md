@@ -28,5 +28,7 @@ pnpm build
 ce plugin validate dist/my-plugin.wasm
 ```
 
-Use `@atheory-ai/ce-plugin-sandbox` to validate fixtures with the CE binary
-before adding the plugin to `ce.yaml`.
+The published plugin sandbox's extraction command is currently incompatible
+with CE (tracked in Context Engine issue #101). Until that release contract is
+fixed, validate an artifact with `ce plugin validate` and the tiny fixture index
+before adding it to `ce.yaml`.

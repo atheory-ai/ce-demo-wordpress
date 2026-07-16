@@ -17,8 +17,9 @@ can deterministically produce code/tests and be compared with source.
    effects, failures, and declared constraints.
 2. Run `scripts/iir-smoke.sh` or the individual `ce iir generate`,
    `gen-tests`, and `verify` commands.
-3. Compare positive, negative, and inconclusive outcomes by the evidence and
-   coverage reported—not by whether generated code looks plausible.
+3. Treat the checked-in fixture as the current positive walkthrough. Negative
+   and inconclusive fixtures are planned release gates; do not imply that this
+   repository already contains all three outcomes.
 4. Relate the fixture to Task 04 as a client-side cache/update boundary only.
    Cite WordPress/Gutenberg source separately when discussing the real flow.
 
@@ -27,6 +28,9 @@ can deterministically produce code/tests and be compared with source.
 - Generation and test emission are TypeScript-only.
 - Generated tests are a test plan/artifact, not proof that a project test suite
   executed.
+- A positive behavior-verification fixture must carry a normalized `whenExpr`.
+  Prose-only `when` text is useful declaration context but not enough to prove
+  that a generated condition matches it.
 - PHP structural/convention plugins do not yet provide modeled semantic
   verification; never turn their facts into a passing IIR claim.
 - Policy/conformance results apply to the declared function intent. They do not

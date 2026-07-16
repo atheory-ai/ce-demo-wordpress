@@ -119,6 +119,7 @@ TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.
   pnpm --filter php-language-plugin run build:grammar
 pnpm test
 pnpm build
+cd ..
 ```
 
 For a reproducible CE setup report and index, use:
@@ -126,6 +127,14 @@ For a reproducible CE setup report and index, use:
 ```sh
 scripts/ce-doctor.sh
 scripts/ce-index.sh --full demo/fixtures/php-iir
+```
+
+For the optional CE + Skillex condition, bootstrap the ignored local registry
+once after cloning, then query a skill by task/path:
+
+```sh
+scripts/skillex-refresh.sh
+skillex query --path demo/tasks/04-rest-api-editor-data-flow.md --format content
 ```
 
 Validate the smallest end-to-end fixture before indexing the source

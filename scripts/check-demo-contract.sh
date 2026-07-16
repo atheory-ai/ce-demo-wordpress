@@ -14,7 +14,7 @@ tracked_mode() {
   git ls-files --stage -- "$1" | awk '{ print $1 }'
 }
 
-branch_name="${GITHUB_BASE_REF:-${GITHUB_REF_NAME:-}}"
+branch_name="${BRANCH_CONTRACT_TARGET:-${GITHUB_BASE_REF:-${GITHUB_REF_NAME:-}}}"
 if [ -z "$branch_name" ]; then
   branch_name="$(git branch --show-current)"
 fi
@@ -61,6 +61,7 @@ if [ "$branch_name" = "main" ]; then
     scripts/ce-reset.sh \
     scripts/ce-doctor.sh \
     scripts/iir-smoke.sh \
+    scripts/skillex-refresh.sh \
     skillex.yaml \
     skillex
   do
@@ -88,6 +89,7 @@ if [ "$branch_name" = "ce" ]; then
     scripts/ce-reset.sh \
     scripts/ce-doctor.sh \
     scripts/iir-smoke.sh \
+    scripts/skillex-refresh.sh \
     demo/iir/README.md \
     demo/iir/intents/task-04-cache-intent.yaml \
     skillex.yaml \

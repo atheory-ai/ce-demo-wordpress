@@ -18,8 +18,9 @@ Run it from the repository root after installing CE:
 scripts/iir-smoke.sh
 ```
 
-The script writes generated artifacts to ignored `demo/runs/iir-smoke/`. They
-are deliberately not committed: the checked-in intent is the durable input.
+The script writes generated artifacts below ignored `demo/runs/`. They are
+deliberately not committed: the checked-in intent is the durable input. IIR
+verification uses the CE installation's default language-plugin bundle.
 
 ## What it proves
 
@@ -28,6 +29,11 @@ are deliberately not committed: the checked-in intent is the durable input.
 - CE can deterministically generate TypeScript and a test artifact from that
   intent, then compare generated source with the declaration.
 - The report is an inspectable contract, not an LLM assertion.
+
+The positive fixture includes a normalized `whenExpr` alongside its readable
+`when` text. That is deliberate: a passing behavior comparison requires a
+structured condition that CE can render and re-extract. A prose-only condition
+is not sufficient semantic evidence and is tracked as a CE soundness issue.
 
 ## What it does not prove
 
