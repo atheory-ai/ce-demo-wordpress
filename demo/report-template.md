@@ -1,4 +1,4 @@
-# Baseline Report Template
+# Context Engine Demo Report Template
 
 ## Run Metadata
 
@@ -9,6 +9,11 @@
 - Branch:
 - Commit:
 - Operator:
+- Condition: `baseline`, `ce`, or `ce-plus-skillex`
+- CE binary version and hash: N/A for baseline
+- Plugin artifact hashes: N/A for baseline
+- Active Skillex skills: none / list
+- Source submodule SHAs:
 
 ## Measurements
 
@@ -49,6 +54,22 @@ telemetry; this is the weighted comparison.
 | Incorrect or unsupported claims |  |  |  |
 | Safer final implementation guidance |  |  |  |
 
+## Semantic Artifact Record
+
+Complete this section only for a bounded IIR exercise. `N/A` is the correct
+value for context-acquisition-only runs.
+
+- Semantic unit and declared intent path:
+- Language and coverage state: `modeled`, `partial`, `unsupported`, or `N/A`
+- Declared facts and constraints:
+- Resolved source bindings and evidence:
+- Open questions:
+- Required / forbidden effects and failures:
+- Policy or conformance findings, including approvals:
+- Generated or selected tests and remaining coverage gaps:
+- Verification verdict: `passed`, `failed`, `inconclusive`, or `N/A`
+- Repair delta and source targets, if any:
+
 ## Notes
 
 - What did the agent search for first?
@@ -57,3 +78,5 @@ telemetry; this is the weighted comparison.
 - Which files or APIs should the CE branch surface faster?
 - For CE-assisted runs, were all manual source reads traceable to CE-cited
   files, symbols, methods, references, call paths, or source ranges?
+- Does the reported verdict match the language/plugin coverage boundary rather
+  than presenting partial evidence as verified behavior?

@@ -7,7 +7,7 @@
     "clean": "pnpm -r clean"
   },
   "devDependencies": {
-    "@atheory-ai/ce-plugin-sdk": "file:../../ce-plugin-sdk/packages/plugin-sdk",
+    "@atheory-ai/ce-plugin-sdk": "^0.1.0",
     "@atheory-ai/wasm-plugin-toolkit": "^0.0.4",
     "typescript": "^5.0.0",
     "vitest": "^1.6.1"

@@ -15,5 +15,18 @@ pnpm build
 
 Use only Zig 0.13.x and the ABI-14 corpus pinned in
 `php-language/grammar.lock`. The resulting `dist/` artifacts are generated and
-ignored; `ce.yaml` loads them after the build. The current local SDK dependency
-contains the grammar-manifest fix tracked in CE issue #94.
+ignored; `ce.yaml` loads them after the build. The plugins depend on the
+published `@atheory-ai/ce-plugin-sdk`; no sibling SDK checkout is required.
+
+To start a new CE plugin beside this demo:
+
+```sh
+pnpm create @atheory-ai/ce-plugin
+cd my-plugin
+pnpm install
+pnpm build
+ce plugin validate dist/my-plugin.wasm
+```
+
+Use `@atheory-ai/ce-plugin-sandbox` to validate fixtures with the CE binary
+before adding the plugin to `ce.yaml`.

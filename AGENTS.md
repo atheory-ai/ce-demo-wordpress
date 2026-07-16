@@ -22,10 +22,16 @@ benchmark is source understanding.
 Use Context Engine for codebase understanding. Do not use broad filesystem
 discovery as the way to learn the source tree. Run CE from this repository root
 so project detection, config loading, and relative paths all refer to the demo
-project.
+project. For a procedural guide, query the local Skillex skills first:
+
+```bash
+skillex query --path AGENTS.md --format content
+```
 
 - Start from a fresh agent with no context copied from a baseline run.
 - Give the agent only this repo path and one task from `demo/tasks/`.
+- Start the CE-assisted condition with `demo/prompts/ce-agent-prompt.md`; use
+  its optional Skillex mode only when the comparison explicitly calls for it.
 - Use the CE harness/integration, graph/source tools, references, callgraph,
   summaries, concepts, and file-context results for discovery and navigation.
   CE v1 benchmark runs should use deterministic CE tools rather than
@@ -67,8 +73,61 @@ mkdir -p /tmp/ce-wordpress-demo-data
 
 Use Zig 0.13.x and the CE-pinned tree-sitter corpus only. The grammar source
 and toolchain requirements are recorded in `plugins/php-language/grammar.lock`.
-The local SDK must include the grammar-manifest fix tracked in CE issue #94;
-do not claim a published SDK bundle provides PHP support yet.
+The demo uses the published CE plugin SDK. The PHP grammar remains demo-owned:
+building it is part of this repository's setup, not a claim that every CE
+installation ships PHP semantic verification.
+
+## Capability Boundaries
+
+- Structural PHP plus WordPress/WooCommerce convention facts are available
+  after the demo plugins build.
+- PHP facts are source-navigation evidence. Do not call them modeled IIR
+  verification until the PHP plugin emits grounded v1 IIR claims and coverage.
+- `demo/iir/` demonstrates the shipped TypeScript intent/generate/test/verify
+  loop. It is a bounded semantic exercise connected to Task 04, not a claim
+  that Gutenberg's PHP/TypeScript flow is fully verified.
+
+<!-- skillex:start -->
+## Skillex
+
+This project uses Skillex for skill management. Use the skillex MCP server
+if available (preferred), otherwise use the CLI commands below.
+
+### MCP (preferred)
+
+If the `skillex` MCP server is connected, use it directly:
+
+- Use the `skillex_query` tool with parameters: path, topic, tags, package, search, format.
+- Use `search` for intent-based discovery — pass space/comma-separated concepts to find relevant skills without knowing the taxonomy.
+- Browse available skills through MCP resource discovery.
+
+### CLI (fallback)
+
+If MCP is not available, query skills via the command line:
+
+```
+  skillex query --search "<concepts>"
+  skillex query --path <filepath>
+  skillex query --topic <topic> --tags <tags>
+  skillex query --package <package>
+  skillex query --path <glob> --topic <topic> --format content
+```
+
+### Available scopes
+
+  - **
+  - demo/iir/**
+  - plugins/**
+
+### Available topics
+
+  benchmark, context-acquisition, context-engine, demo-architecture, gutenberg, iir, php, plugin-authoring, semantic-verification, typescript, wasm, woocommerce, wordpress
+
+### Available tags
+
+  blocks, coverage, evidence, guided-learning, hooks, iir, intent, policy, repair, rest-api, sandbox, sdk, source-evidence, tree-sitter, wordpress
+
+<!-- skillex:end -->
 
 ## Measurement
 

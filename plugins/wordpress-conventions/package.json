@@ -9,6 +9,6 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@atheory-ai/ce-plugin-sdk": "file:../../../ce-plugin-sdk/packages/plugin-sdk"
+    "@atheory-ai/ce-plugin-sdk": "^0.1.0"
   }
 }

@@ -1,6 +1,7 @@
 .DS_Store
 demo/runs/
 demo/reports/
+.skillex/
 plugins/node_modules/
 plugins/*/node_modules/
 plugins/*/dist/

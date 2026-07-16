@@ -1,6 +1,7 @@
 # Atheory CE Demo: WordPress Ecosystem
 
-This repository is a source-understanding demo for Context Engine.
+This repository is a source-understanding and semantic-development demo for
+Context Engine (CE).
 
 The demo uses a large WordPress ecosystem code constellation to show how AI
 agents behave when they must reason across unfamiliar, multi-language,
@@ -10,7 +11,8 @@ needs more domain complexity.
 
 This `ce` branch is the Context Engine comparison branch. It keeps the same
 source constellation as `main`, then adds CE configuration, a demo-owned PHP
-language plugin, and a WordPress/WooCommerce convention plugin.
+language plugin, a WordPress/WooCommerce convention plugin, reproducible CE
+scripts, a bounded IIR walkthrough, and Skillex process guidance.
 
 ## What This Demo Should Prove
 
@@ -29,7 +31,7 @@ help agents:
 | Branch | Purpose |
 | --- | --- |
 | `main` | Source-only baseline. No CE config, no CE fixtures, no Skillex augmentation. |
-| `ce` | CE-equipped branch. Currently includes PHP structural indexing and WordPress/WooCommerce convention facts; IIR verification remains a planned capability. |
+| `ce` | CE-equipped branch. Adds source graph/context workflows, PHP structural and convention facts, a bounded TypeScript IIR walkthrough, and optional Skillex guidance. |
 
 The branch comparison is the core demo:
 
@@ -47,6 +49,31 @@ the upstream commit dates at the time the baseline was created.
 | `wordpress/` | `https://github.com/WordPress/wordpress-develop.git` | `5a96ff4d54a97955b02ac3c20f3ae7f21185232f` | 2026-05-17 | WordPress core APIs, REST controllers, hooks, block server behavior, and tests. |
 | `gutenberg/` | `https://github.com/WordPress/gutenberg.git` | `a37545b9299d4dbbd8c3d332f7e109da5a6d5d24` | 2026-05-18 | Editor packages, block registration behavior, React UI, data stores, and serialization logic. |
 | `woocommerce/` | `https://github.com/woocommerce/woocommerce.git` | `75675a3fe976ef45d503de4d4c9d2cf5b48a79f1` | 2026-05-18 | Commerce domain flows, checkout blocks, Store API, product data, and extension points. |
+
+## Choose Your Journey
+
+The demo supports both a guided learning path and question-led exploration.
+They use the same source constellation and evidence discipline.
+
+1. **Guided comparison:** run the source-only task on `main`, then the same
+   task on `ce`; record the result with the shared report template.
+2. **Question-led exploration:** begin with a real WordPress/Gutenberg/
+   WooCommerce question, use CE tools to obtain evidence, then narrow-read only
+   CE-cited source.
+3. **Semantic loop:** run the bounded TypeScript IIR smoke walkthrough. It
+   shows intent → deterministic code/tests → verification, and makes the
+   TypeScript-only coverage boundary visible.
+4. **Plugin authoring:** use the published SDK to build these PHP/convention
+   plugins or scaffold a new one. This demonstrates how CE's semantic substrate
+   becomes extensible rather than hard-coded.
+
+See [demo](./demo/), [the learning architecture](./specs/20-DEMO-LEARNING-ARCHITECTURE.md),
+and the local Skillex skills in [skills](./skills/).
+
+For an agent-run comparison, use the source-only
+[`baseline-agent-prompt.md`](./demo/prompts/baseline-agent-prompt.md) on
+`main`, then the CE-specific
+[`ce-agent-prompt.md`](./demo/prompts/ce-agent-prompt.md) on this branch.
 
 ## Getting Started
 
@@ -80,9 +107,9 @@ tree-sitter corpus pinned by CE (`github.com/malivvan/tree-sitter@v0.0.1`), whos
 PHP grammar has language ABI 14. Newer upstream PHP grammars currently emit ABI
 15 and are incompatible with CE's embedded tree-sitter core.
 
-The current SDK repository is archived. Until its grammar-manifest fix is
-published, this demo expects the sibling local SDK checkout containing that fix
-(tracked by [CE issue #94](https://github.com/atheory-ai/context-engine/issues/94)).
+The plugins use the published `@atheory-ai/ce-plugin-sdk`. The PHP grammar is
+still a demo-owned side module, intentionally built from the pinned ABI-14
+corpus below.
 
 ```sh
 cd plugins
@@ -92,6 +119,13 @@ TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.
   pnpm --filter php-language-plugin run build:grammar
 pnpm test
 pnpm build
+```
+
+For a reproducible CE setup report and index, use:
+
+```sh
+scripts/ce-doctor.sh
+scripts/ce-index.sh --full demo/fixtures/php-iir
 ```
 
 Validate the smallest end-to-end fixture before indexing the source
@@ -118,9 +152,11 @@ Use the materials in [demo](./demo/) to run no-CE control sessions:
    and answer quality using [demo/report-template.md](./demo/report-template.md).
 4. Summarize publishable observations in [demo/baseline-notes.md](./demo/baseline-notes.md).
 
-The CE branch already has `ce.yaml` and the plugin fixture above. Scripted
-semantic queries, Studio flows, Skillex comparison, and PHP IIR verification
-remain planned work; see [specs/11-IIR-DEMO-UPGRADE-OVERVIEW.md](./specs/11-IIR-DEMO-UPGRADE-OVERVIEW.md).
+The CE branch has a bounded, reproducible TypeScript IIR walkthrough at
+[`demo/iir`](./demo/iir/). PHP and WordPress convention facts remain structural
+or partial evidence until their plugin emits grounded modeled claims; the demo
+does not present them as semantic verification. The broader semantic roadmap is
+in [Spec 11](./specs/11-IIR-DEMO-UPGRADE-OVERVIEW.md).
 
 ## Spec Index
 
@@ -144,3 +180,4 @@ remain planned work; see [specs/11-IIR-DEMO-UPGRADE-OVERVIEW.md](./specs/11-IIR-
 - [17 PHP, WordPress, And WooCommerce Semantics](./specs/17-PHP-WORDPRESS-WOOCOMMERCE-SEMANTICS.md)
 - [18 Skillex Demo Layer](./specs/18-SKILLEX-DEMO-LAYER.md)
 - [19 IIR Demo Delivery Plan](./specs/19-IIR-DEMO-DELIVERY-PLAN.md)
+- [20 Demo Learning Architecture](./specs/20-DEMO-LEARNING-ARCHITECTURE.md)

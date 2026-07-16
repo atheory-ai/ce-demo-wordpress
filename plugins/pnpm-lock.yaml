@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@atheory-ai/ce-plugin-sdk':
-        specifier: file:../../ce-plugin-sdk/packages/plugin-sdk
-        version: file:../../ce-plugin-sdk/packages/plugin-sdk(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
+        specifier: ^0.1.0
+        version: 0.1.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
       '@atheory-ai/wasm-plugin-toolkit':
         specifier: ^0.0.4
         version: 0.0.4(esbuild@0.21.5)
@@ -24,23 +24,27 @@ importers:
   php-language:
     dependencies:
       '@atheory-ai/ce-plugin-sdk':
-        specifier: file:../../../ce-plugin-sdk/packages/plugin-sdk
-        version: file:../../ce-plugin-sdk/packages/plugin-sdk(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
+        specifier: ^0.1.0
+        version: 0.1.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
 
   wordpress-conventions:
     dependencies:
       '@atheory-ai/ce-plugin-sdk':
-        specifier: file:../../../ce-plugin-sdk/packages/plugin-sdk
-        version: file:../../ce-plugin-sdk/packages/plugin-sdk(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
+        specifier: ^0.1.0
+        version: 0.1.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
 
 packages:
 
-  '@atheory-ai/ce-plugin-sdk@file:../../ce-plugin-sdk/packages/plugin-sdk':
-    resolution: {directory: ../../ce-plugin-sdk/packages/plugin-sdk, type: directory}
+  '@atheory-ai/ce-plugin-sdk@0.1.0':
+    resolution: {integrity: sha512-cxmmb/dxVLYnmUM9E3zwRVeauVvZYNBiUIQt7CqVDj7oKkHCWMQ0ttb+x5CHqNdPt9Dfl7X9DLMImr4hkeaJZw==}
+    engines: {node: '>=20'}
     peerDependencies:
       '@atheory-ai/wasm-plugin-toolkit': ^0.0.4
+      eslint: ^8.57.0 || ^9.0.0
     peerDependenciesMeta:
       '@atheory-ai/wasm-plugin-toolkit':
+        optional: true
+      eslint:
         optional: true
 
   '@atheory-ai/wasm-plugin-toolkit@0.0.4':
@@ -654,7 +658,7 @@ packages:
 
 snapshots:
 
-  '@atheory-ai/ce-plugin-sdk@file:../../ce-plugin-sdk/packages/plugin-sdk(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))':
+  '@atheory-ai/ce-plugin-sdk@0.1.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))':
     optionalDependencies:
       '@atheory-ai/wasm-plugin-toolkit': 0.0.4(esbuild@0.21.5)
 
