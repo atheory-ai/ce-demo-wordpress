@@ -1,0 +1,24 @@
+kind: FunctionIntent
+name: refreshEditorEntityCache
+language: typescript
+inputs:
+  - name: entityKey
+    type: string
+returns:
+  type: void
+behavior:
+  - when: entityKey === ""
+    then: throw invalid_entity_key
+    whenExpr:
+      op: "==="
+      args:
+        - op: path
+          text: entityKey
+        - op: lit
+          text: '""'
+sideEffects:
+  - cache.invalidate
+failureModes:
+  - invalid_entity_key
+constraints:
+  - This is a bounded client-side teaching fixture related to Task 04, not a lifted Gutenberg implementation.

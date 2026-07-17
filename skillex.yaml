@@ -1,0 +1,16 @@
+# Skillex configuration for the CE-enabled demo branch.
+Version: 4
+Rules:
+  - Scope: '**'
+    Skills:
+      - skills/demo-architecture.md
+      - skills/ce-guided-investigation.md
+    DependencyBoundary: ''
+  - Scope: 'demo/iir/**'
+    Skills:
+      - skills/iir-verification.md
+    DependencyBoundary: ''
+  - Scope: 'plugins/**'
+    Skills:
+      - skills/wordpress-plugin-authoring.md
+    DependencyBoundary: ''

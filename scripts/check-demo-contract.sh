@@ -14,7 +14,7 @@ tracked_mode() {
   git ls-files --stage -- "$1" | awk '{ print $1 }'
 }
 
-branch_name="${GITHUB_BASE_REF:-${GITHUB_REF_NAME:-}}"
+branch_name="${BRANCH_CONTRACT_TARGET:-${GITHUB_BASE_REF:-${GITHUB_REF_NAME:-}}}"
 if [ -z "$branch_name" ]; then
   branch_name="$(git branch --show-current)"
 fi
@@ -59,6 +59,9 @@ if [ "$branch_name" = "main" ]; then
     scripts/ce-index.sh \
     scripts/ce-query.sh \
     scripts/ce-reset.sh \
+    scripts/ce-doctor.sh \
+    scripts/iir-smoke.sh \
+    scripts/skillex-refresh.sh \
     skillex.yaml \
     skillex
   do
@@ -75,12 +78,25 @@ if [ "$branch_name" = "ce" ]; then
     demo/benchmark-instructions-checkout-field-validation.md \
     demo/benchmark-instructions-store-api-headless-cart-merge.md \
     demo/benchmark-instructions-zero-cost-renewal.md \
+    demo/prompts/ce-agent-prompt.md \
     demo/comparison-report-2026-05-29-checkout-field-validation.md \
     demo/comparison-report-2026-05-29-zero-cost-renewal.md \
     demo/comparison-report-2026-06-01-store-api-headless-cart-merge.md \
     demo/comparison-report-2026-06-02-store-api-direct-tools.md \
     demo/tasks/06-zero-cost-renewal-draft-order.md \
-    demo/tasks/07-store-api-headless-cart-merge.md
+    demo/tasks/07-store-api-headless-cart-merge.md \
+    scripts/ce-index.sh \
+    scripts/ce-reset.sh \
+    scripts/ce-doctor.sh \
+    scripts/iir-smoke.sh \
+    scripts/skillex-refresh.sh \
+    demo/iir/README.md \
+    demo/iir/intents/task-04-cache-intent.yaml \
+    skillex.yaml \
+    skills/demo-architecture.md \
+    skills/ce-guided-investigation.md \
+    skills/iir-verification.md \
+    skills/wordpress-plugin-authoring.md
   do
     has_path "$required" || fail "ce branch required file is missing: $required"
   done

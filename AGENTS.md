@@ -10,6 +10,8 @@ demo repository. Use CE to understand the codebase.
 - `demo/tasks/` - benchmark tasks
 - `demo/report-template.md` - run report template
 - `specs/` - benchmark design notes
+- `plugins/php-language/` - demo-owned structural PHP plugin
+- `plugins/wordpress-conventions/` - additive WordPress/WooCommerce facts
 
 Do not require a running WordPress site, database, browser, PHP server, or Node
 dev server unless a task explicitly asks for runtime validation. The primary
@@ -20,10 +22,19 @@ benchmark is source understanding.
 Use Context Engine for codebase understanding. Do not use broad filesystem
 discovery as the way to learn the source tree. Run CE from this repository root
 so project detection, config loading, and relative paths all refer to the demo
-project.
+project. For a **CE + Skillex** comparison, bootstrap the local Skillex registry
+once in a fresh clone, then query the relevant skills. Do not load Skillex in a
+CE-only comparison.
+
+```bash
+scripts/skillex-refresh.sh
+skillex query --path AGENTS.md --format content
+```
 
 - Start from a fresh agent with no context copied from a baseline run.
 - Give the agent only this repo path and one task from `demo/tasks/`.
+- Start the CE-assisted condition with `demo/prompts/ce-agent-prompt.md`; use
+  its optional Skillex mode only when the comparison explicitly calls for it.
 - Use the CE harness/integration, graph/source tools, references, callgraph,
   summaries, concepts, and file-context results for discovery and navigation.
   CE v1 benchmark runs should use deterministic CE tools rather than
@@ -45,29 +56,81 @@ project.
 Recommended local setup:
 
 ```bash
-ce --config ./ce.yaml project init
-
-ce --config ./ce.yaml index . --full \
-  --exclude '**/.git/**' \
-  --exclude '**/node_modules/**' \
-  --exclude '**/vendor/**' \
-  --exclude '**/build/**' \
-  --exclude '**/dist/**'
+cd plugins
+pnpm install
+TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.0.1/src" \
+  ZIG=/path/to/zig-0.13 \
+  pnpm --filter php-language-plugin run build:grammar
+pnpm test && pnpm build
 ```
 
-When using a local development binary, replace `ce` with the explicit binary
-path and pass the same `--config ./ce.yaml` and `--data-dir` values for all CE
-commands and harness configuration. Local development binaries do not embed
-release plugin artifacts, so copy the SDK-built default plugins into the data
-directory before indexing:
+Run the small fixture before the corpus. It must report one indexed file with
+both structural and convention facts (currently 11 nodes, 10 edges), and no
+write-buffer warnings:
 
 ```bash
-mkdir -p "$CE_DATA_DIR/plugins/defaults"
-cp /path/to/ce-plugin-sdk/plugins/go-language/dist/go-language.wasm "$CE_DATA_DIR/plugins/defaults/"
-cp /path/to/ce-plugin-sdk/plugins/typescript-language/dist/typescript.wasm "$CE_DATA_DIR/plugins/defaults/"
-cp /path/to/ce-plugin-sdk/plugins/python-language/dist/python.wasm "$CE_DATA_DIR/plugins/defaults/"
-cp /path/to/ce-plugin-sdk/plugins/php-language/dist/php.wasm "$CE_DATA_DIR/plugins/defaults/"
+mkdir -p /tmp/ce-wordpress-demo-data
+/path/to/ce --config ./ce.yaml --data-dir /tmp/ce-wordpress-demo-data \
+  index demo/fixtures/php-iir --full
 ```
+
+Use Zig 0.13.x and the CE-pinned tree-sitter corpus only. The grammar source
+and toolchain requirements are recorded in `plugins/php-language/grammar.lock`.
+The demo uses the published CE plugin SDK. The PHP grammar remains demo-owned:
+building it is part of this repository's setup, not a claim that every CE
+installation ships PHP semantic verification.
+
+## Capability Boundaries
+
+- Structural PHP plus WordPress/WooCommerce convention facts are available
+  after the demo plugins build.
+- PHP facts are source-navigation evidence. Do not call them modeled IIR
+  verification until the PHP plugin emits grounded v1 IIR claims and coverage.
+- `demo/iir/` demonstrates the shipped TypeScript intent/generate/test/verify
+  loop. It is a bounded semantic exercise connected to Task 04, not a claim
+  that Gutenberg's PHP/TypeScript flow is fully verified.
+
+<!-- skillex:start -->
+## Skillex
+
+This project uses Skillex for skill management. Use the skillex MCP server
+if available (preferred), otherwise use the CLI commands below.
+
+### MCP (preferred)
+
+If the `skillex` MCP server is connected, use it directly:
+
+- Use the `skillex_query` tool with parameters: path, topic, tags, package, search, format.
+- Use `search` for intent-based discovery — pass space/comma-separated concepts to find relevant skills without knowing the taxonomy.
+- Browse available skills through MCP resource discovery.
+
+### CLI (fallback)
+
+If MCP is not available, query skills via the command line:
+
+```
+  skillex query --search "<concepts>"
+  skillex query --path <filepath>
+  skillex query --topic <topic> --tags <tags>
+  skillex query --package <package>
+  skillex query --path <glob> --topic <topic> --format content
+```
+
+### Available scopes
+
+  - **
+  - demo/iir/**
+  - plugins/**
+
+### Available topics
+
+  benchmark, context-acquisition, context-engine, demo-architecture, gutenberg, iir, php, plugin-authoring, semantic-verification, typescript, wasm, woocommerce, wordpress
+
+### Available tags
+
+  blocks, coverage, evidence, guided-learning, hooks, iir, intent, policy, repair, rest-api, sandbox, sdk, source-evidence, tree-sitter, wordpress
+
+<!-- skillex:end -->
 
 ## Measurement
 

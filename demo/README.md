@@ -1,34 +1,40 @@
-# Baseline Demo
+# CE Demo Operations
 
-This directory defines the no-CE control run for the WordPress ecosystem demo.
+This directory holds the shared task corpus and the CE-branch operating
+instructions for the WordPress ecosystem demo.
 
-Use this branch to measure how much discovery work an agent needs when it only
-has the source tree and ordinary shell tools. Do not add CE configuration,
-generated indexes, Studio walkthroughs, Skillex skills, or precomputed answers
-to this branch.
+## Choose A Condition
 
-## Setup
+| Condition | Branch | Prompt | Allowed aids |
+| --- | --- | --- | --- |
+| Baseline | `main` | [baseline-agent-prompt.md](./prompts/baseline-agent-prompt.md) | Ordinary local source inspection only. |
+| CE | `ce` | [ce-agent-prompt.md](./prompts/ce-agent-prompt.md) | CE graph/source evidence; no Skillex skill. |
+| CE + Skillex | `ce` | [ce-agent-prompt.md](./prompts/ce-agent-prompt.md) | CE evidence plus the recorded relevant procedural skill. |
 
-Clone the repository with submodules:
+The task, source revisions, model, and report template must be the same across
+conditions. Keep baseline results honest: the goal is a fair context-quality
+comparison, not a predetermined winner.
+
+## CE Branch Setup
+
+After cloning with submodules, build the demo-owned plugins under `plugins/`,
+then run from the repository root:
 
 ```sh
-git clone --recurse-submodules git@github.com:atheory-ai/ce-demo-wordpress.git
+CE_BIN=/path/to/current/ce scripts/ce-doctor.sh
+CE_BIN=/path/to/current/ce scripts/ce-index.sh --full demo/fixtures/php-iir
 ```
 
-If the repository was already cloned:
+The demo requires a current CE build that supports the `plugins.installed`
+configuration used by `ce.yaml`; a binary labelled only `0.1.0-dev` may be too
+old. For CE + Skillex, also run `scripts/skillex-refresh.sh` before the first
+skill query.
 
-```sh
-git submodule update --init --recursive
-```
+## Run A Session
 
-## Running A Baseline Session
-
-1. Pick one task from [tasks](./tasks/).
-2. Start with [prompts/baseline-agent-prompt.md](./prompts/baseline-agent-prompt.md).
-3. Ask the agent to solve the task using only this branch.
-4. Record measurements using [report-template.md](./report-template.md).
-5. Summarize observations in [baseline-notes.md](./baseline-notes.md).
-
-The most important measurements are context-ready time, lookup actions, token
-use, source coverage, relationship accuracy, missed critical context, and
-whether the final answer cites the correct files.
+1. Pick a task from [tasks](./tasks/).
+2. Start a fresh agent with only the repository, selected prompt, and task.
+3. Record context evidence, lookup actions, source citations, uncertainty, and
+   outcomes in [report-template.md](./report-template.md).
+4. Keep IIR work bounded to [iir](./iir/); do not infer full WordPress runtime
+   verification from a source-understanding task.

@@ -1,0 +1,4 @@
+source=github.com/malivvan/tree-sitter
+version=v0.0.1
+grammar=src/php
+language_abi=14

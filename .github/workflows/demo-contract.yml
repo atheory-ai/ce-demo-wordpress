@@ -24,4 +24,6 @@ jobs:
           submodules: recursive
 
       - name: Validate demo contract
+        env:
+          BRANCH_CONTRACT_TARGET: ${{ github.event.pull_request.base.ref || github.ref_name }}
         run: scripts/check-demo-contract.sh

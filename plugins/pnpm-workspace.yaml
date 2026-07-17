@@ -1,0 +1,7 @@
+packages:
+  - "php-language"
+  - "wordpress-conventions"
+
+allowBuilds:
+  '@atheory-ai/wasm-plugin-toolkit': true
+  esbuild: true
