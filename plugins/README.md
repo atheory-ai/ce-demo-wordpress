@@ -2,7 +2,19 @@
 
 These two plugins are intentionally separate: `php-language` owns generic PHP
 structure and the `php-grammar.wasm` side module, while
-`wordpress-conventions` adds framework facts from the same CST.
+`wordpress-conventions` adds framework facts from the same CST. The current
+vocabulary and its evidence/coverage limits are specified in
+[`specs/21-WORDPRESS-WOOCOMMERCE-SEMANTIC-VOCABULARY.md`](../specs/21-WORDPRESS-WOOCOMMERCE-SEMANTIC-VOCABULARY.md).
+
+The convention plugin currently records observed hook, REST-route, block,
+Store API extension, security-boundary, and cart-effect facts. It preserves
+unresolved callback/configuration expressions rather than claiming PHP runtime
+resolution, authorization correctness, or whole-program IIR verification.
+
+PHP structural symbol identities are stable per source declaration:
+`<project-relative-path>:<namespace-or-global>:<kind>:<declaration>`. This
+prevents same-named declarations in separate files or namespaces from sharing a
+graph node.
 
 ```sh
 pnpm install

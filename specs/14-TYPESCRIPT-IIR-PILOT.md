@@ -33,9 +33,9 @@ selected constructs:
 Unmodeled syntax must remain `partial` or `unsupported`; do not inflate
 coverage to make the demonstration pass.
 
-## Demo artifacts
+## Current demo artifact
 
-For one positive, one negative, and one inconclusive fixture, check in:
+The current pilot checks in one positive fixture with:
 
 - declared intent;
 - expected bindings and open questions;
@@ -43,12 +43,17 @@ For one positive, one negative, and one inconclusive fixture, check in:
 - expected recipe/test-plan summary;
 - observed-lift expectation;
 - verification verdict; and
-- repair expectation for the negative case.
+- a verification verdict.
 
-## Acceptance criteria
+## Current acceptance criteria
 
 - Positive fixture: required modeled claims verify as `passed`.
-- Negative fixture: verification fails with evidence-backed repair targets.
-- Inconclusive fixture: missing lift coverage remains visible and cannot pass.
 - The same artifacts can be regenerated and compared in CI without an LLM.
 
+## Future expansion
+
+Add negative and inconclusive fixtures only with their declared intent, expected
+bindings, policy findings, recipe/test-plan summary, observed-lift expectation,
+verification verdict, and (for the negative fixture) evidence-backed repair
+expectation. Those outcomes must remain visible in deterministic CI and the
+inconclusive fixture must never report `passed`.
