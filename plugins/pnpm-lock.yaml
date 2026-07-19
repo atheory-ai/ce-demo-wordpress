@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@atheory-ai/ce-plugin-sandbox':
+        specifier: ^0.1.0
+        version: 0.1.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
       '@atheory-ai/ce-plugin-sdk':
         specifier: ^0.2.0
         version: 0.2.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
@@ -34,6 +37,23 @@ importers:
         version: 0.2.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
 
 packages:
+
+  '@atheory-ai/ce-plugin-sandbox@0.1.0':
+    resolution: {integrity: sha512-m0+fqos4cGO1DbTDaJKSvTykacc1hy1PK2rU/aJ5QCuIP7xhr03p05jjUuzMKLH91EyruMOx9PpXK5T2CC/Ucg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  '@atheory-ai/ce-plugin-sdk@0.1.0':
+    resolution: {integrity: sha512-cxmmb/dxVLYnmUM9E3zwRVeauVvZYNBiUIQt7CqVDj7oKkHCWMQ0ttb+x5CHqNdPt9Dfl7X9DLMImr4hkeaJZw==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@atheory-ai/wasm-plugin-toolkit': ^0.0.4
+      eslint: ^8.57.0 || ^9.0.0
+    peerDependenciesMeta:
+      '@atheory-ai/wasm-plugin-toolkit':
+        optional: true
+      eslint:
+        optional: true
 
   '@atheory-ai/ce-plugin-sdk@0.2.0':
     resolution: {integrity: sha512-6XBTYLWYY0SpY50jiGZeojZX209pbLhm/gKyw+a8yVAVkTWs5IryapbMY5N+Ke3HjLvGsidSwUNjN3kQSH1yvg==}
@@ -382,6 +402,10 @@ packages:
     resolution: {integrity: sha512-RITGBfijLkBddZvnn8jdqoTypxvqbOLYQkGGxXzeFjVHvudaPw0HNFD9x928/eUwYWd2dPCugVqspGALTZZQKw==}
     engines: {node: '>=4'}
 
+  chalk@5.6.2:
+    resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
+    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+
   check-error@1.0.3:
     resolution: {integrity: sha512-iKEoDYaRmd1mxM90a2OEfWhjsjPpYPuQ+lMYsoxB126+t8fw7ySEO48nmDg5COTjxDI65/Y2OWpeEHk3ZOe8zg==}
 
@@ -658,6 +682,18 @@ packages:
 
 snapshots:
 
+  '@atheory-ai/ce-plugin-sandbox@0.1.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))':
+    dependencies:
+      '@atheory-ai/ce-plugin-sdk': 0.1.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
+      chalk: 5.6.2
+    transitivePeerDependencies:
+      - '@atheory-ai/wasm-plugin-toolkit'
+      - eslint
+
+  '@atheory-ai/ce-plugin-sdk@0.1.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))':
+    optionalDependencies:
+      '@atheory-ai/wasm-plugin-toolkit': 0.0.4(esbuild@0.21.5)
+
   '@atheory-ai/ce-plugin-sdk@0.2.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))':
     optionalDependencies:
       '@atheory-ai/wasm-plugin-toolkit': 0.0.4(esbuild@0.21.5)
@@ -870,6 +906,8 @@ snapshots:
       loupe: 2.3.7
       pathval: 1.1.1
       type-detect: 4.1.0
+
+  chalk@5.6.2: {}
 
   check-error@1.0.3:
     dependencies:

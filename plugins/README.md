@@ -40,7 +40,12 @@ pnpm build
 ce plugin validate dist/my-plugin.wasm
 ```
 
-The published plugin sandbox's extraction command is currently incompatible
-with CE (tracked in Context Engine issue #101). Until that release contract is
-fixed, validate an artifact with `ce plugin validate` and the tiny fixture index
-before adding it to `ce.yaml`.
+The published plugin sandbox exercises the same extraction contract as CE. Use
+the same CE binary that will load the plugin, then validate a real fixture:
+
+```sh
+pnpm exec ce-sandbox run \
+  php-language/dist/php-language.wasm \
+  ../demo/fixtures/php-iir/wordpress-hooks.php \
+  --ce /path/to/ce --json
+```
