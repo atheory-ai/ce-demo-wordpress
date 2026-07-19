@@ -35,5 +35,7 @@ Use this skill for source-understanding tasks on the CE branch.
 ## Stop conditions
 
 Stop and report a setup/release blocker if CE cannot load the demo plugins,
-index the required source, or cite usable source anchors. Do not silently fall
-back to broad filesystem discovery and claim a CE-assisted result.
+indexes zero files, cannot index the required source, cannot query the indexed
+graph, or cannot cite usable source anchors. Do not silently fall back to broad
+filesystem discovery or claim a CE-assisted result from an empty or unusable
+index.

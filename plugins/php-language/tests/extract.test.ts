@@ -31,4 +31,32 @@ describe("PHP structural extraction", () => {
   it("never invents declarations when a grammar tree is unavailable", () => {
     expect(extract("src/catalog.php", "function invented() {}", null).nodes).toHaveLength(1)
   })
+
+  it("keeps root-level and same-named declarations in separate file identities", () => {
+    const declaration = node("program", "", null, [node("function_definition", "", null, [node("name", "bootstrap", "name")])])
+    const root = extract("bootstrap.php", "<?php", declaration)
+    const first = extract("plugins/first.php", "<?php", declaration)
+    const second = extract("plugins/second.php", "<?php", declaration)
+
+    const rootSymbol = root.nodes.find((item) => item.type === "symbol")
+    const firstSymbol = first.nodes.find((item) => item.type === "symbol")
+    const secondSymbol = second.nodes.find((item) => item.type === "symbol")
+    expect(rootSymbol?.canonicalID).toBe("bootstrap.php:global:function:bootstrap")
+    expect(firstSymbol?.id).not.toBe(secondSymbol?.id)
+    expect(first.edges.find((item) => item.type === "defines")?.targetID).toBe(firstSymbol?.id)
+    expect(second.edges.find((item) => item.type === "defines")?.targetID).toBe(secondSymbol?.id)
+  })
+
+  it("includes namespace context in structural symbol identities", () => {
+    const namespaced = (namespaceName: string): SyntaxNode => node("program", "", null, [
+      node("namespace_definition", "", null, [
+        node("name", namespaceName, "name"),
+        node("declaration_list", "", "body", [node("function_definition", "", null, [node("name", "bootstrap", "name")])]),
+      ]),
+    ])
+
+    const first = extract("plugins/bootstrap.php", "<?php", namespaced("Demo\\One"))
+    const second = extract("plugins/bootstrap.php", "<?php", namespaced("Demo\\Two"))
+    expect(first.nodes.find((item) => item.type === "symbol")?.id).not.toBe(second.nodes.find((item) => item.type === "symbol")?.id)
+  })
 })

@@ -11,6 +11,11 @@ Store API extension, security-boundary, and cart-effect facts. It preserves
 unresolved callback/configuration expressions rather than claiming PHP runtime
 resolution, authorization correctness, or whole-program IIR verification.
 
+PHP structural symbol identities are stable per source declaration:
+`<project-relative-path>:<namespace-or-global>:<kind>:<declaration>`. This
+prevents same-named declarations in separate files or namespaces from sharing a
+graph node.
+
 ```sh
 pnpm install
 TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.0.1/src" \

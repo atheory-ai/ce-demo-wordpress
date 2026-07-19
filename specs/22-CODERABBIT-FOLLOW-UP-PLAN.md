@@ -6,6 +6,11 @@ Close the remaining valid findings from the semantic-composition review without
 mixing structural-identity or destructive-command changes into the vocabulary
 release.
 
+## Status
+
+All three workstreams below are implemented on the semantic-composition branch;
+their regression coverage and documentation changes ship with the follow-up.
+
 ## Workstream 1 — PHP structural identity hardening
 
 ### Problem

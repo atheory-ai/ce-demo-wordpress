@@ -9,7 +9,6 @@ import type { Edge, ExtractionResult, LanguageDefinition, Node, SyntaxNode } fro
 export const extract: LanguageDefinition["extract"] = (filePath, content, tree): ExtractionResult => {
   const nodes: Node[] = []
   const edges: Edge[] = []
-  const directory = filePath.slice(0, filePath.lastIndexOf("/")) || "."
   const fileID = nodeID("", "file", filePath)
 
   nodes.push({
@@ -19,8 +18,14 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
   })
   if (!tree) return { nodes, edges }
 
-  const addSymbol = (name: string, kind: string, node: SyntaxNode, extra: Record<string, unknown> = {}): string => {
-    const canonicalID = `${directory}:${name}`
+  const addSymbol = (
+    name: string,
+    kind: string,
+    node: SyntaxNode,
+    extra: Record<string, unknown> = {},
+    namespaceName = "",
+  ): string => {
+    const canonicalID = symbolCanonicalID(filePath, namespaceName, kind, name)
     const id = nodeID("", "symbol", canonicalID)
     nodes.push({
       id, type: "symbol", label: name, canonicalID, sourceClass: "structural",
@@ -46,11 +51,14 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
     })
   }
 
-  const visit = (node: SyntaxNode, className = ""): void => {
+  const visit = (node: SyntaxNode, className = "", namespaceName = ""): void => {
     switch (node.type) {
-      case "namespace_definition":
-        addNamespace(childByField(node, "name")?.text ?? "", node)
-        break
+      case "namespace_definition": {
+        const declaredNamespace = childByField(node, "name")?.text ?? ""
+        addNamespace(declaredNamespace, node)
+        for (const child of node.children ?? []) visit(child, "", declaredNamespace)
+        return
+      }
       case "namespace_use_declaration":
         for (const clause of (node.children ?? []).filter((child) => child.type === "namespace_use_clause")) {
           addNamespace(firstDescendantByType(clause, "qualified_name")?.text ?? firstDescendantByType(clause, "name")?.text ?? "", clause, true)
@@ -66,26 +74,33 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
         const parent = base ? (firstDescendantByType(base, "qualified_name")?.text ?? firstDescendantByType(base, "name")?.text) : undefined
         // A superclass can be external to the indexed slice. Preserve it as
         // metadata rather than emitting an edge to a node not established here.
-        addSymbol(name, node.type.replace("_declaration", ""), node, { extends: parent })
-        for (const child of node.children ?? []) visit(child, name)
+        addSymbol(name, node.type.replace("_declaration", ""), node, { extends: parent }, namespaceName)
+        for (const child of node.children ?? []) visit(child, name, namespaceName)
         return
       }
       case "method_declaration": {
         const name = childByField(node, "name")?.text ?? ""
-        if (name) addSymbol(className ? `${className}.${name}` : name, "method", node, { visibility: visibility(node) })
+        if (name) addSymbol(className ? `${className}.${name}` : name, "method", node, { visibility: visibility(node) }, namespaceName)
         break
       }
       case "function_definition": {
         const name = childByField(node, "name")?.text ?? ""
-        if (name) addSymbol(name, "function", node)
+        if (name) addSymbol(name, "function", node, {}, namespaceName)
         break
       }
     }
-    for (const child of node.children ?? []) visit(child, className)
+    for (const child of node.children ?? []) visit(child, className, namespaceName)
   }
 
   visit(tree)
   return deduplicate(nodes, edges)
+}
+
+// Symbol IDs must remain unique across source files and PHP declaration scopes.
+// The format is documented for the demo plugin because it is part of the
+// persisted graph identity, not just a display value.
+function symbolCanonicalID(filePath: string, namespaceName: string, kind: string, name: string): string {
+  return `${filePath}:${namespaceName || "global"}:${kind}:${name}`
 }
 
 function visibility(node: SyntaxNode): string | undefined {
