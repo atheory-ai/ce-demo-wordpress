@@ -239,7 +239,11 @@ function arrayEntries(node: SyntaxNode | undefined): Record<string, string> {
   if (!array) return {}
   const entries: Record<string, string> = {}
   for (const entry of namedChildren(array).filter((child) => child.type === "array_element_initializer")) {
-    const [key, value] = namedChildren(entry)
+    const children = namedChildren(entry)
+    // The pinned PHP grammar exposes these fields. Retain positional fallback
+    // for older parser builds and the minimal synthetic CSTs used by callers.
+    const key = childByField(entry, "key") ?? children[0]
+    const value = childByField(entry, "value") ?? children[1]
     const name = stringValue(key)
     const expression = expressionValue(value)
     if (name && expression) entries[name] = expression

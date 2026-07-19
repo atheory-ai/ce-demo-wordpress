@@ -30,7 +30,7 @@ function demo_update_cart( $cart, $value ): void {
 	}
 
 	$clean_value = sanitize_text_field( $value );
-	$cart->add_to_cart( 123 );
+	$cart->add_to_cart( 123, 1, 0, array(), array( 'gift_message' => $clean_value ) );
 }
 
 add_action( 'rest_api_init', 'demo_register_store_data' );

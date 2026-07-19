@@ -15,8 +15,11 @@ function call(name: string, args: SyntaxNode[]): SyntaxNode {
   return node("function_call_expression", "", null, [node("name", name, "function"), node("arguments", "", "arguments", args)])
 }
 
-function entry(key: string, value: SyntaxNode): SyntaxNode {
-  return node("array_element_initializer", "", null, [node("string", `'${key}'`), value])
+function entry(key: string, value: SyntaxNode, useFields = false): SyntaxNode {
+  return node("array_element_initializer", "", null, [
+    node("string", `'${key}'`, useFields ? "key" : null),
+    { ...value, fieldName: useFields ? "value" : value.fieldName },
+  ])
 }
 
 function array(entries: SyntaxNode[]): SyntaxNode {
@@ -87,6 +90,25 @@ describe("WordPress convention extraction", () => {
       permission_callback: "__return_true",
       permission_callback_presence: "observed",
       args_declaration: "$args",
+    })
+  })
+
+  it("uses the PHP grammar's named array key and value fields when available", () => {
+    const tree = node("program", "", null, [
+      call("register_rest_route", [
+        node("string", "'demo/v1'"),
+        node("string", "'/catalog'"),
+        array([
+          entry("methods", node("name", "WP_REST_Server::READABLE"), true),
+          entry("permission_callback", node("name", "__return_true"), true),
+        ]),
+      ]),
+    ])
+
+    const route = extract("plugins/catalog.php", "", tree).nodes.find((item) => item.type === "wordpress_route")
+    expect(route?.properties).toMatchObject({
+      methods: "WP_REST_Server::READABLE",
+      permission_callback: "__return_true",
     })
   })
 
