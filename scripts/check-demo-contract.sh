@@ -60,7 +60,9 @@ if [ "$branch_name" = "main" ]; then
     scripts/ce-query.sh \
     scripts/ce-reset.sh \
     scripts/ce-doctor.sh \
+    scripts/ce-regression.sh \
     scripts/iir-smoke.sh \
+    scripts/mcp-regression.sh \
     scripts/skillex-refresh.sh \
     skillex.yaml \
     skillex

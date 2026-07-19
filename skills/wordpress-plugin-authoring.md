@@ -30,10 +30,13 @@ pnpm build
 ce plugin validate dist/my-plugin.wasm
 ```
 
-Use `ce plugin validate` and the tiny fixture index against the same CE binary
-that will load the plugin. The published `@atheory-ai/ce-plugin-sandbox` is not
-yet part of this demo's supported path: its extraction command is incompatible
-with current CE (issue #101).
+Use `ce plugin validate`, the tiny fixture index, and the published
+`@atheory-ai/ce-plugin-sandbox` against the same CE binary that will load the
+plugin:
+
+```sh
+ce-sandbox run dist/my-plugin.wasm tests/fixtures/example.php --ce /path/to/ce --json
+```
 
 ## Semantic authoring rules
 
