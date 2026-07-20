@@ -59,4 +59,49 @@ describe("PHP structural extraction", () => {
     const second = extract("plugins/bootstrap.php", "<?php", namespaced("Demo\\Two"))
     expect(first.nodes.find((item) => item.type === "symbol")?.id).not.toBe(second.nodes.find((item) => item.type === "symbol")?.id)
   })
+
+  it("preserves a fieldless PHP namespace_name child in symbol identity", () => {
+    const tree = node("program", "", null, [
+      node("namespace_definition", "", null, [
+        node("namespace_name", "Demo\\Store"),
+        node("declaration_list", "", "body", [node("function_definition", "", null, [node("name", "demo_update_cart", "name")])]),
+      ]),
+    ])
+
+    const result = extract("boundaries.php", "<?php", tree)
+    expect(result.nodes.find((item) => item.type === "symbol")?.canonicalID)
+      .toBe("boundaries.php:Demo\\Store:function:demo_update_cart")
+  })
+
+  it("uses the recognized namespace declaration text when no name child is serialized", () => {
+    const tree = node("program", "", null, [
+      node("namespace_definition", "namespace Demo\\Store;", null, [
+        node("declaration_list", "", "body", [node("function_definition", "", null, [node("name", "demo_update_cart", "name")])]),
+      ]),
+    ])
+    const result = extract("boundaries.php", "<?php", tree)
+    expect(result.nodes.find((item) => item.type === "symbol")?.canonicalID)
+      .toBe("boundaries.php:Demo\\Store:function:demo_update_cart")
+  })
+
+  it("uses a bare namespace token carried by the recognized declaration node", () => {
+    const tree = node("program", "", null, [
+      node("namespace_definition", "Demo\\Store", null, [
+        node("declaration_list", "", "body", [node("function_definition", "", null, [node("name", "demo_update_cart", "name")])]),
+      ]),
+    ])
+    const result = extract("boundaries.php", "<?php", tree)
+    expect(result.nodes.find((item) => item.type === "symbol")?.canonicalID)
+      .toBe("boundaries.php:Demo\\Store:function:demo_update_cart")
+  })
+
+  it("falls back to the in-scope source namespace when the serialized CST has no wrapper", () => {
+    const declaration = node("function_definition", "", null, [node("name", "demo_update_cart", "name")])
+    declaration.startByte = "<?php\nnamespace Demo\\Store;\n".length
+    const tree = node("program", "", null, [declaration])
+    const content = "<?php\nnamespace Demo\\Store;\nfunction demo_update_cart() {}"
+    const result = extract("boundaries.php", content, tree)
+    expect(result.nodes.find((item) => item.type === "symbol")?.canonicalID)
+      .toBe("boundaries.php:Demo\\Store:function:demo_update_cart")
+  })
 })
