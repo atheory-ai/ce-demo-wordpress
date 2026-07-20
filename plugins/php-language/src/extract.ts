@@ -54,7 +54,16 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
   const visit = (node: SyntaxNode, className = "", namespaceName = ""): void => {
     switch (node.type) {
       case "namespace_definition": {
-        const declaredNamespace = childByField(node, "name")?.text ?? ""
+        // tree-sitter PHP grammar versions serialize a namespace declaration
+        // either with a `name` field or as an unfielded namespace_name child.
+        // Do not silently fall back to global: canonical symbol identity must
+        // preserve the declaration scope in both CST shapes.
+        const declaredNamespace = childByField(node, "name")?.text
+          ?? firstDescendantByType(node, "namespace_name")?.text
+          ?? firstDescendantByType(node, "qualified_name")?.text
+          ?? namespaceFromDeclarationText(node.text)
+          ?? namespaceFromDeclarationText(content.slice(node.startByte, node.endByte))
+          ?? ""
         addNamespace(declaredNamespace, node)
         for (const child of node.children ?? []) visit(child, "", declaredNamespace)
         return
@@ -74,18 +83,19 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
         const parent = base ? (firstDescendantByType(base, "qualified_name")?.text ?? firstDescendantByType(base, "name")?.text) : undefined
         // A superclass can be external to the indexed slice. Preserve it as
         // metadata rather than emitting an edge to a node not established here.
-        addSymbol(name, node.type.replace("_declaration", ""), node, { extends: parent }, namespaceName)
-        for (const child of node.children ?? []) visit(child, name, namespaceName)
+        const declarationNamespace = namespaceName || namespaceAtOffset(content, node.startByte)
+        addSymbol(name, node.type.replace("_declaration", ""), node, { extends: parent }, declarationNamespace)
+        for (const child of node.children ?? []) visit(child, name, declarationNamespace)
         return
       }
       case "method_declaration": {
         const name = childByField(node, "name")?.text ?? ""
-        if (name) addSymbol(className ? `${className}.${name}` : name, "method", node, { visibility: visibility(node) }, namespaceName)
+        if (name) addSymbol(className ? `${className}.${name}` : name, "method", node, { visibility: visibility(node) }, namespaceName || namespaceAtOffset(content, node.startByte))
         break
       }
       case "function_definition": {
         const name = childByField(node, "name")?.text ?? ""
-        if (name) addSymbol(name, "function", node, {}, namespaceName)
+        if (name) addSymbol(name, "function", node, {}, namespaceName || namespaceAtOffset(content, node.startByte))
         break
       }
     }
@@ -101,6 +111,26 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
 // persisted graph identity, not just a display value.
 function symbolCanonicalID(filePath: string, namespaceName: string, kind: string, name: string): string {
   return `${filePath}:${namespaceName || "global"}:${kind}:${name}`
+}
+
+// The grammar has changed the child shape of namespace_definition across
+// releases. The enclosing node is already grammar-recognized, so this is only
+// a lexical fallback for its direct declaration payload—not a regex-based PHP
+// semantic extractor.
+function namespaceFromDeclarationText(text: string): string | undefined {
+  const match = /^\s*namespace\s+([A-Za-z_][A-Za-z0-9_\\]*)\s*[;{]/.exec(text)
+  if (match?.[1]) return match[1]
+  return /^[A-Za-z_][A-Za-z0-9_\\]*$/.test(text) ? text : undefined
+}
+
+// Fallback for grammar versions that wrap PHP namespace declarations in a
+// node shape the SDK serializer does not expose. It is used only when the CST
+// traversal has no namespace context, and selects the declaration in scope for
+// this declaration's source offset (including files with several namespaces).
+function namespaceAtOffset(content: string, offset: number): string {
+  const prefix = content.slice(0, offset)
+  const matches = [...prefix.matchAll(/\bnamespace\s+([A-Za-z_][A-Za-z0-9_\\]*)\s*[;{]/g)]
+  return matches.at(-1)?.[1] ?? ""
 }
 
 function visibility(node: SyntaxNode): string | undefined {

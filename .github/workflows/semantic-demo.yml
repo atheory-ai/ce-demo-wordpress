@@ -32,10 +32,10 @@ jobs:
 
       - name: Install Context Engine release
         env:
-          CE_VERSION: 0.2.0
+          CE_VERSION: 0.3.0
           CE_INSTALL_DIR: ${{ github.workspace }}/.tools
         run: |
-          curl -fsSL https://raw.githubusercontent.com/atheory-ai/context-engine/v0.2.0/install.sh | sh
+          curl -fsSL https://raw.githubusercontent.com/atheory-ai/context-engine/v0.3.0/install.sh | sh
           .tools/ce version
 
       - name: Set up Go and Zig for the demo-owned PHP grammar
