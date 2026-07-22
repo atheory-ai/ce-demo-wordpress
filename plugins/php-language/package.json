@@ -1,15 +1,16 @@
 {
   "name": "php-language-plugin",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "build": "wasm-toolkit-build --plugin . --config ../wasm-toolkit.config.mjs --output dist/php-language.wasm",
+    "build": "ce-plugin-build --plugin . --output dist/php-language.wasm",
+    "build:dev": "wasm-toolkit-build --plugin . --config ../wasm-toolkit.config.mjs --output dist/php-language.dev.wasm",
     "build:grammar": "./scripts/build-grammar.sh",
     "test": "vitest run --passWithNoTests",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@atheory-ai/ce-plugin-sdk": "^0.2.0"
+    "@atheory-ai/ce-plugin-sdk": "^0.4.0"
   }
 }

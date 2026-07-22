@@ -102,12 +102,15 @@ The CE branch currently provides two additive PHP plugins:
   routes, and block registration. It does not claim runtime behavior or PHP IIR
   verification coverage.
 
-Prerequisites are Node 22+, pnpm, Go, and Zig 0.13.x. The grammar must use the
+Prerequisites are Node 22+, pnpm, Go, Zig 0.13.x, and the
+[Extism JavaScript PDK](https://github.com/extism/js-pdk) `extism-js` compiler
+on `PATH` (or set `EXTISM_JS=/path/to/extism-js`). The grammar must use the
 tree-sitter corpus pinned by CE (`github.com/malivvan/tree-sitter@v0.0.1`), whose
 PHP grammar has language ABI 14. Newer upstream PHP grammars currently emit ABI
 15 and are incompatible with CE's embedded tree-sitter core.
 
-The plugins use the published `@atheory-ai/ce-plugin-sdk`. The PHP grammar is
+This demo release requires CE `v0.5.0` or later and the published
+`@atheory-ai/ce-plugin-sdk` `^0.4.0`. The PHP grammar is
 still a demo-owned side module, intentionally built from the pinned ABI-14
 corpus below.
 
@@ -121,6 +124,11 @@ pnpm test
 pnpm build
 cd ..
 ```
+
+`pnpm build` creates production Extism byte-ABI artifacts. CE accepts those by
+default. `pnpm run build:dev` inside either plugin creates a Javy stream-I/O
+artifact only for plugin development; index it explicitly with CE's
+`--allow-dev-stream-plugins` flag, never in a production demo or CI run.
 
 For a reproducible CE setup report and index, use:
 
