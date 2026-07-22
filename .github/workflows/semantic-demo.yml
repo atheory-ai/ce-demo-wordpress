@@ -32,11 +32,18 @@ jobs:
 
       - name: Install Context Engine release
         env:
-          CE_VERSION: 0.3.0
+          CE_VERSION: 0.5.0
           CE_INSTALL_DIR: ${{ github.workspace }}/.tools
         run: |
-          curl -fsSL https://raw.githubusercontent.com/atheory-ai/context-engine/v0.3.0/install.sh | sh
+          curl -fsSL https://raw.githubusercontent.com/atheory-ai/context-engine/v0.5.0/install.sh | sh
           .tools/ce version
+
+      - name: Install production plugin compiler
+        run: |
+          compiler_dir="$RUNNER_TEMP/ce-extism"
+          curl -fsSL https://raw.githubusercontent.com/atheory-ai/context-engine/v0.5.0/sdk/scripts/install-extism-js.sh \
+            | sh -s "$compiler_dir"
+          echo "$compiler_dir/bin" >> "$GITHUB_PATH"
 
       - name: Set up Go and Zig for the demo-owned PHP grammar
         uses: actions/setup-go@v5

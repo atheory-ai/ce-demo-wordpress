@@ -1,14 +1,15 @@
 {
   "name": "wordpress-conventions-plugin",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "build": "wasm-toolkit-build --plugin . --config ../wasm-toolkit.config.mjs --output dist/wordpress-conventions.wasm",
+    "build": "ce-plugin-build --plugin . --output dist/wordpress-conventions.wasm",
+    "build:dev": "wasm-toolkit-build --plugin . --config ../wasm-toolkit.config.mjs --output dist/wordpress-conventions.dev.wasm",
     "test": "vitest run --passWithNoTests",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@atheory-ai/ce-plugin-sdk": "^0.2.0"
+    "@atheory-ai/ce-plugin-sdk": "^0.4.0"
   }
 }
