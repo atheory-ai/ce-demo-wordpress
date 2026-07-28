@@ -1,0 +1,180 @@
+{
+  "status": "passed",
+  "intended": {
+    "kind": "FunctionIntent",
+    "name": "refreshEditorEntityCache",
+    "language": "typescript",
+    "origin": "declared",
+    "visibility": "public",
+    "inputs": [
+      {
+        "name": "entityKey",
+        "type": "string"
+      }
+    ],
+    "returns": {
+      "type": "void",
+      "explicit": true
+    },
+    "behavior": [
+      {
+        "when": "entityKey === \"\"",
+        "then": "throw invalid_entity_key",
+        "whenExpr": {
+          "op": "===",
+          "args": [
+            {
+              "op": "path",
+              "text": "entityKey"
+            },
+            {
+              "op": "lit",
+              "text": "\"\""
+            }
+          ]
+        }
+      }
+    ],
+    "sideEffects": [
+      "cache.invalidate"
+    ],
+    "failureModes": [
+      "invalid_entity_key"
+    ],
+    "constraints": [
+      "This is a bounded client-side teaching fixture related to Task 04, not a lifted Gutenberg implementation."
+    ]
+  },
+  "extracted": {
+    "kind": "FunctionIntent",
+    "name": "refreshEditorEntityCache",
+    "language": "typescript",
+    "origin": "observed",
+    "visibility": "public",
+    "inputs": [
+      {
+        "name": "entityKey",
+        "type": "string"
+      }
+    ],
+    "returns": {
+      "type": "void",
+      "explicit": true
+    },
+    "behavior": [
+      {
+        "when": "entityKey === \"\"",
+        "then": "throw new Error(\"entity_not_found\")",
+        "whenExpr": {
+          "op": "===",
+          "args": [
+            {
+              "op": "path",
+              "text": "entityKey"
+            },
+            {
+              "op": "lit",
+              "text": "\"\""
+            }
+          ]
+        },
+        "thenExpr": {
+          "op": "throw",
+          "value": "entity_not_found"
+        }
+      }
+    ],
+    "sideEffects": [
+      {
+        "name": "cache.invalidate",
+        "kind": "unclassified",
+        "basis": "heuristic"
+      }
+    ],
+    "failureModes": [
+      {
+        "code": "entity_not_found",
+        "kind": "constructed"
+      }
+    ],
+    "constraints": []
+  },
+  "matches": [
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.name",
+      "message": "function name \"refreshEditorEntityCache\" matches"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.visibility",
+      "message": "visibility \"public\" matches"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.inputs[0]",
+      "message": "input \"entityKey\" matches"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.returns.type",
+      "message": "return type \"void\" matches"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.sideEffects",
+      "message": "declared side effects match source"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.behavior",
+      "message": "behavior clause count matches (1)"
+    }
+  ],
+  "mismatches": [
+    {
+      "kind": "changed_failure_mode",
+      "severity": "warning",
+      "path": "FunctionIntent.failureModes",
+      "message": "intended failure modes not observed in source: invalid_entity_key",
+      "expected": [
+        "invalid_entity_key"
+      ],
+      "actual": [
+        {
+          "code": "entity_not_found",
+          "kind": "constructed"
+        }
+      ],
+      "repairTarget": "Confirm the source can produce: invalid_entity_key."
+    }
+  ],
+  "ruleResults": [
+    {
+      "id": "function-explicit-return-type",
+      "target": "FunctionIntent",
+      "severity": "error",
+      "status": "passed",
+      "message": "requirements satisfied"
+    },
+    {
+      "id": "declare-side-effects",
+      "target": "FunctionIntent",
+      "severity": "error",
+      "status": "passed",
+      "message": "requirements satisfied"
+    },
+    {
+      "id": "expected-failures-use-result",
+      "target": "FunctionIntent",
+      "severity": "warning",
+      "status": "warned",
+      "message": "expected failures should be returned via a Result type, not thrown",
+      "repair": "Change the return type to a Result/ValidationResult that carries the failure."
+    }
+  ],
+  "repairTargets": [
+    "Confirm the source can produce: invalid_entity_key.",
+    "Change the return type to a Result/ValidationResult that carries the failure."
+  ]
+}

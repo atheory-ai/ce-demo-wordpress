@@ -1,0 +1,10 @@
+kind: FunctionIntent
+name: update_cart_item
+language: php
+inputs:
+  - name: product_id
+    type: int
+  - name: quantity
+    type: int
+returns:
+  type: bool

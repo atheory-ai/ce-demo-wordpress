@@ -1,0 +1,8 @@
+rules:
+  - id: lmir-testing-forbid-empty-key-equality
+    target: FunctionIntent
+    severity: error
+    require:
+      forbidConditionShape:
+        ops: ["==="]
+        operandLiteral: '""'

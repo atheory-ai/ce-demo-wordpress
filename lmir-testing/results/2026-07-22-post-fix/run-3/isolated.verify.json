@@ -1,0 +1,167 @@
+{
+  "status": "passed",
+  "intended": {
+    "kind": "FunctionIntent",
+    "name": "refreshEditorEntityCache",
+    "language": "typescript",
+    "origin": "declared",
+    "visibility": "public",
+    "inputs": [
+      {
+        "name": "entityKey",
+        "type": "string"
+      }
+    ],
+    "returns": {
+      "type": "void",
+      "explicit": true
+    },
+    "behavior": [
+      {
+        "when": "entityKey === \"\"",
+        "then": "throw invalid_entity_key",
+        "whenExpr": {
+          "op": "===",
+          "args": [
+            {
+              "op": "path",
+              "text": "entityKey"
+            },
+            {
+              "op": "lit",
+              "text": "\"\""
+            }
+          ]
+        }
+      }
+    ],
+    "sideEffects": [
+      "cache.invalidate"
+    ],
+    "failureModes": [
+      "invalid_entity_key"
+    ],
+    "constraints": [
+      "This is a bounded client-side teaching fixture related to Task 04, not a lifted Gutenberg implementation."
+    ]
+  },
+  "extracted": {
+    "kind": "FunctionIntent",
+    "name": "refreshEditorEntityCache",
+    "language": "typescript",
+    "origin": "observed",
+    "visibility": "public",
+    "inputs": [
+      {
+        "name": "entityKey",
+        "type": "string"
+      }
+    ],
+    "returns": {
+      "type": "void",
+      "explicit": true
+    },
+    "behavior": [
+      {
+        "when": "entityKey === \"\"",
+        "then": "throw new Error(\"invalid_entity_key\")",
+        "whenExpr": {
+          "op": "===",
+          "args": [
+            {
+              "op": "path",
+              "text": "entityKey"
+            },
+            {
+              "op": "lit",
+              "text": "\"\""
+            }
+          ]
+        },
+        "thenExpr": {
+          "op": "throw",
+          "value": "invalid_entity_key"
+        }
+      }
+    ],
+    "sideEffects": [
+      {
+        "name": "cache.invalidate",
+        "kind": "unclassified",
+        "basis": "heuristic"
+      }
+    ],
+    "failureModes": [
+      {
+        "code": "invalid_entity_key",
+        "kind": "constructed"
+      }
+    ],
+    "constraints": []
+  },
+  "matches": [
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.name",
+      "message": "function name \"refreshEditorEntityCache\" matches"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.visibility",
+      "message": "visibility \"public\" matches"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.inputs[0]",
+      "message": "input \"entityKey\" matches"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.returns.type",
+      "message": "return type \"void\" matches"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.sideEffects",
+      "message": "declared side effects match source"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.failureModes",
+      "message": "declared failure modes observed in source"
+    },
+    {
+      "kind": "exact_match",
+      "path": "FunctionIntent.behavior",
+      "message": "behavior clause count matches (1)"
+    }
+  ],
+  "mismatches": [],
+  "ruleResults": [
+    {
+      "id": "function-explicit-return-type",
+      "target": "FunctionIntent",
+      "severity": "error",
+      "status": "passed",
+      "message": "requirements satisfied"
+    },
+    {
+      "id": "declare-side-effects",
+      "target": "FunctionIntent",
+      "severity": "error",
+      "status": "passed",
+      "message": "requirements satisfied"
+    },
+    {
+      "id": "expected-failures-use-result",
+      "target": "FunctionIntent",
+      "severity": "warning",
+      "status": "warned",
+      "message": "expected failures should be returned via a Result type, not thrown",
+      "repair": "Change the return type to a Result/ValidationResult that carries the failure."
+    }
+  ],
+  "repairTargets": [
+    "Change the return type to a Result/ValidationResult that carries the failure."
+  ]
+}

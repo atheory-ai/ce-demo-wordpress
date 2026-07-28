@@ -2,7 +2,13 @@
 # Reference: https://docs.atheory.ai/ce/config
 
 llm:
-  provider: local
+  # LMIR model-backed experiments use the compiled CE OpenAI ABI path. The API
+  # key remains in the caller's environment (OPENAI_API_KEY), never in this
+  # repository.
+  provider: openai
+  models:
+    standard: gpt-5.6-luna
+  reasoning_effort: medium
 
 # Index-time plugin lifts are enabled deliberately. The PHP demo plugin does
 # not yet emit modeled IIR, so a PHP result is navigation evidence, not a
@@ -26,6 +32,9 @@ plugins:
   installed:
     # Build these demo-owned artifacts first: `cd plugins && pnpm install && pnpm build`.
     # PHP Language supplies the CST parser; the convention plugin adds WordPress
-    # and WooCommerce facts from that same parsed tree.
+    # facts from that same parsed tree. The semantic policy plugins turn
+    # evidence-backed IIR tags into framework-specific implementation contracts.
     - path: ./plugins/php-language/dist/php-language.wasm
     - path: ./plugins/wordpress-conventions/dist/wordpress-conventions.wasm
+    - path: ./plugins/woocommerce-conventions/dist/woocommerce-conventions.wasm
+    - path: ./plugins/gutenberg-conventions/dist/gutenberg-conventions.wasm

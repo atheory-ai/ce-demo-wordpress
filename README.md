@@ -102,21 +102,23 @@ The CE branch currently provides two additive PHP plugins:
   routes, and block registration. It does not claim runtime behavior or PHP IIR
   verification coverage.
 
-Prerequisites are Node 22+, pnpm, Go, Zig 0.13.x, and the
-[Extism JavaScript PDK](https://github.com/extism/js-pdk) `extism-js` compiler
-on `PATH` (or set `EXTISM_JS=/path/to/extism-js`). The grammar must use the
+Prerequisites are Node 22+, pnpm, Go, and Zig 0.13.x. The demo installs the
+pinned [Extism JavaScript PDK](https://github.com/extism/js-pdk) compiler and
+its Binaryen tools into `plugins/.tools/extism`; no global compiler or separate
+SDK checkout is required. The grammar must use the
 tree-sitter corpus pinned by CE (`github.com/malivvan/tree-sitter@v0.0.1`), whose
 PHP grammar has language ABI 14. Newer upstream PHP grammars currently emit ABI
 15 and are incompatible with CE's embedded tree-sitter core.
 
-This demo release requires CE `v0.5.0` or later and the published
-`@atheory-ai/ce-plugin-sdk` `^0.4.0`. The PHP grammar is
+This demo release requires CE `v0.6.0` or later and the published
+`@atheory-ai/ce-plugin-sdk` `^0.5.0`. The PHP grammar is
 still a demo-owned side module, intentionally built from the pinned ABI-14
 corpus below.
 
 ```sh
 cd plugins
 pnpm install
+pnpm run toolchain:install
 TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.0.1/src" \
   ZIG=/path/to/zig-0.13 \
   pnpm --filter php-language-plugin run build:grammar

@@ -1,6 +1,8 @@
 packages:
   - "php-language"
   - "wordpress-conventions"
+  - "woocommerce-conventions"
+  - "gutenberg-conventions"
 
 allowBuilds:
   '@atheory-ai/wasm-plugin-toolkit': true

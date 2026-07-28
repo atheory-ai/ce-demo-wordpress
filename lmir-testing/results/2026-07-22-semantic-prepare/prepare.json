@@ -1,0 +1,420 @@
+{
+  "plan": {
+    "id": "plan-ca66e7dce4934ddff6070cea8e3e6684",
+    "projectId": "local",
+    "schemaVersion": "v1",
+    "revision": 3,
+    "parentId": "plan-db87dac1f1877ba5bdb5937ef936d156",
+    "unit": {
+      "id": "unit-02557576dce0aae61",
+      "canonicalId": "CheckoutValidator.validate_key",
+      "scope": "function",
+      "language": "php",
+      "sourceRefs": []
+    },
+    "intent": {
+      "kind": "FunctionIntent",
+      "name": "validateCheckoutKey",
+      "language": "php",
+      "origin": "inferred",
+      "visibility": "public",
+      "inputs": [
+        {
+          "name": "checkoutKey",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "",
+        "explicit": false
+      },
+      "behavior": [
+        {
+          "when": "The checkout key is empty.",
+          "then": "Reject the checkout key.",
+          "whenExpr": {
+            "op": "==",
+            "args": [
+              {
+                "op": "path",
+                "text": "checkoutKey"
+              },
+              {
+                "op": "lit"
+              }
+            ]
+          }
+        }
+      ],
+      "sideEffects": null,
+      "failureModes": [
+        "empty_checkout_key"
+      ],
+      "constraints": [
+        "No side effects may occur before checkout key validation succeeds."
+      ]
+    },
+    "bindings": [],
+    "claims": [
+      {
+        "id": "context-abe0f500c4b2ee5d1",
+        "kind": "context.woocommerce.checkout",
+        "statement": "woocommerce.checkout",
+        "state": "declared",
+        "evidence": [
+          {
+            "id": "context-abe0f500c4b2ee5d1.evidence",
+            "source": "user",
+            "producer": "cli.iir.prepare",
+            "confidence": "high",
+            "explanation": "Caller-declared context tag."
+          }
+        ]
+      }
+    ],
+    "obligations": [],
+    "decisions": [],
+    "openQuestions": [
+      {
+        "id": "question-fe8a3f128bc2c6a53",
+        "prompt": "Should validateCheckoutKey be public or private?",
+        "blocking": true,
+        "state": "unknown",
+        "evidence": [
+          {
+            "id": "question-fe8a3f128bc2c6a53.evidence",
+            "source": "model",
+            "producer": "semantic.shaping",
+            "field": "visibility",
+            "confidence": "medium",
+            "explanation": "Model identified a missing decision rather than inventing it."
+          }
+        ],
+        "candidates": []
+      },
+      {
+        "id": "question-9c6edae9171967d93",
+        "prompt": "What should the function return on success and rejection, such as a boolean, Result, or ValidationResult?",
+        "blocking": true,
+        "state": "unknown",
+        "evidence": [
+          {
+            "id": "question-9c6edae9171967d93.evidence",
+            "source": "model",
+            "producer": "semantic.shaping",
+            "field": "returns.type",
+            "confidence": "medium",
+            "explanation": "Model identified a missing decision rather than inventing it."
+          }
+        ],
+        "candidates": []
+      },
+      {
+        "id": "question-91ecf96d53aadd8f3",
+        "prompt": "What should the function do when the checkout key is non-empty?",
+        "blocking": true,
+        "state": "unknown",
+        "evidence": [
+          {
+            "id": "question-91ecf96d53aadd8f3.evidence",
+            "source": "model",
+            "producer": "semantic.shaping",
+            "field": "behavior.success",
+            "confidence": "medium",
+            "explanation": "Model identified a missing decision rather than inventing it."
+          }
+        ],
+        "candidates": []
+      },
+      {
+        "id": "question-1ebc86f4972e7a243",
+        "prompt": "Which client methods, if any, should be invoked after validation succeeds?",
+        "blocking": false,
+        "state": "unknown",
+        "evidence": [
+          {
+            "id": "question-1ebc86f4972e7a243.evidence",
+            "source": "model",
+            "producer": "semantic.shaping",
+            "field": "sideEffects",
+            "confidence": "medium",
+            "explanation": "Model identified a missing decision rather than inventing it."
+          }
+        ],
+        "candidates": []
+      }
+    ],
+    "passRecords": [
+      {
+        "id": "pass-b61a97e31907978c2",
+        "passId": "semantic.shaping.questions",
+        "version": "v1",
+        "phase": "resolve",
+        "inputs": [
+          "plan-05bd0c64aae341801017891b4be76dce"
+        ],
+        "outputs": [
+          "open questions"
+        ],
+        "evidence": [
+          {
+            "id": "evidence-b61a97e31907978c2",
+            "source": "model",
+            "producer": "semantic.shaping",
+            "confidence": "medium",
+            "explanation": "Validated model open questions attached to plan."
+          }
+        ]
+      },
+      {
+        "id": "pass-4011201ca3b5333c2",
+        "passId": "semantic.context.declared",
+        "version": "v1",
+        "phase": "resolve",
+        "inputs": [
+          "plan-db87dac1f1877ba5bdb5937ef936d156"
+        ],
+        "outputs": [
+          "woocommerce.checkout"
+        ],
+        "evidence": [
+          {
+            "id": "evidence-4011201ca3b5333c2",
+            "source": "user",
+            "producer": "cli.iir.prepare",
+            "confidence": "high",
+            "explanation": "Explicit context tags supplied to semantic preparation."
+          }
+        ]
+      }
+    ],
+    "lifecycle": "declared",
+    "provenance": [
+      {
+        "id": "intent",
+        "source": "model",
+        "producer": "iir.shaper",
+        "field": "intent",
+        "confidence": "medium",
+        "explanation": "Initial intent inferred from natural-language input."
+      },
+      {
+        "id": "intent-name",
+        "source": "model",
+        "producer": "semantic.shaping",
+        "field": "intent.name",
+        "confidence": "medium",
+        "explanation": "Model-inferred name for validateCheckoutKey."
+      },
+      {
+        "id": "intent-language",
+        "source": "model",
+        "producer": "semantic.shaping",
+        "field": "intent.language",
+        "confidence": "medium",
+        "explanation": "Model-inferred language for validateCheckoutKey."
+      },
+      {
+        "id": "intent-inputs",
+        "source": "model",
+        "producer": "semantic.shaping",
+        "field": "intent.inputs",
+        "confidence": "medium",
+        "explanation": "Model-inferred inputs for validateCheckoutKey."
+      },
+      {
+        "id": "intent-returns",
+        "source": "model",
+        "producer": "semantic.shaping",
+        "field": "intent.returns",
+        "confidence": "medium",
+        "explanation": "Model-inferred returns for validateCheckoutKey."
+      },
+      {
+        "id": "intent-behavior",
+        "source": "model",
+        "producer": "semantic.shaping",
+        "field": "intent.behavior",
+        "confidence": "medium",
+        "explanation": "Model-inferred behavior for validateCheckoutKey."
+      },
+      {
+        "id": "intent-sideEffects",
+        "source": "model",
+        "producer": "semantic.shaping",
+        "field": "intent.sideEffects",
+        "confidence": "medium",
+        "explanation": "Model-inferred sideEffects for validateCheckoutKey."
+      },
+      {
+        "id": "intent-failureModes",
+        "source": "model",
+        "producer": "semantic.shaping",
+        "field": "intent.failureModes",
+        "confidence": "medium",
+        "explanation": "Model-inferred failureModes for validateCheckoutKey."
+      },
+      {
+        "id": "intent-constraints",
+        "source": "model",
+        "producer": "semantic.shaping",
+        "field": "intent.constraints",
+        "confidence": "medium",
+        "explanation": "Model-inferred constraints for validateCheckoutKey."
+      }
+    ]
+  },
+  "packet": {
+    "schemaVersion": "v1",
+    "planRevisionId": "plan-ca66e7dce4934ddff6070cea8e3e6684",
+    "status": "blocked",
+    "target": {
+      "id": "unit-02557576dce0aae61",
+      "canonicalId": "CheckoutValidator.validate_key",
+      "scope": "function",
+      "language": "php",
+      "sourceRefs": []
+    },
+    "intent": {
+      "kind": "FunctionIntent",
+      "name": "validateCheckoutKey",
+      "language": "php",
+      "origin": "inferred",
+      "visibility": "public",
+      "inputs": [
+        {
+          "name": "checkoutKey",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "",
+        "explicit": false
+      },
+      "behavior": [
+        {
+          "when": "The checkout key is empty.",
+          "then": "Reject the checkout key.",
+          "whenExpr": {
+            "op": "==",
+            "args": [
+              {
+                "op": "path",
+                "text": "checkoutKey"
+              },
+              {
+                "op": "lit"
+              }
+            ]
+          }
+        }
+      ],
+      "sideEffects": null,
+      "failureModes": [
+        "empty_checkout_key"
+      ],
+      "constraints": [
+        "No side effects may occur before checkout key validation succeeds."
+      ]
+    },
+    "bindings": null,
+    "claims": [
+      {
+        "id": "context-abe0f500c4b2ee5d1",
+        "kind": "context.woocommerce.checkout",
+        "statement": "woocommerce.checkout",
+        "state": "declared",
+        "evidence": [
+          {
+            "id": "context-abe0f500c4b2ee5d1.evidence",
+            "source": "user",
+            "producer": "cli.iir.prepare",
+            "confidence": "high",
+            "explanation": "Caller-declared context tag."
+          }
+        ]
+      }
+    ],
+    "requirements": [],
+    "openQuestions": [
+      {
+        "id": "question-fe8a3f128bc2c6a53",
+        "prompt": "Should validateCheckoutKey be public or private?",
+        "blocking": true,
+        "state": "unknown",
+        "evidence": [
+          {
+            "id": "question-fe8a3f128bc2c6a53.evidence",
+            "source": "model",
+            "producer": "semantic.shaping",
+            "field": "visibility",
+            "confidence": "medium",
+            "explanation": "Model identified a missing decision rather than inventing it."
+          }
+        ],
+        "candidates": []
+      },
+      {
+        "id": "question-9c6edae9171967d93",
+        "prompt": "What should the function return on success and rejection, such as a boolean, Result, or ValidationResult?",
+        "blocking": true,
+        "state": "unknown",
+        "evidence": [
+          {
+            "id": "question-9c6edae9171967d93.evidence",
+            "source": "model",
+            "producer": "semantic.shaping",
+            "field": "returns.type",
+            "confidence": "medium",
+            "explanation": "Model identified a missing decision rather than inventing it."
+          }
+        ],
+        "candidates": []
+      },
+      {
+        "id": "question-91ecf96d53aadd8f3",
+        "prompt": "What should the function do when the checkout key is non-empty?",
+        "blocking": true,
+        "state": "unknown",
+        "evidence": [
+          {
+            "id": "question-91ecf96d53aadd8f3.evidence",
+            "source": "model",
+            "producer": "semantic.shaping",
+            "field": "behavior.success",
+            "confidence": "medium",
+            "explanation": "Model identified a missing decision rather than inventing it."
+          }
+        ],
+        "candidates": []
+      },
+      {
+        "id": "question-1ebc86f4972e7a243",
+        "prompt": "Which client methods, if any, should be invoked after validation succeeds?",
+        "blocking": false,
+        "state": "unknown",
+        "evidence": [
+          {
+            "id": "question-1ebc86f4972e7a243.evidence",
+            "source": "model",
+            "producer": "semantic.shaping",
+            "field": "sideEffects",
+            "confidence": "medium",
+            "explanation": "Model identified a missing decision rather than inventing it."
+          }
+        ],
+        "candidates": []
+      }
+    ],
+    "instructions": [
+      "Treat requirements as mandatory unless the plan explicitly says otherwise.",
+      "Use resolved bindings and cited evidence; do not rediscover or replace them from guesswork.",
+      "Return a proposed patch and explain how each requirement is satisfied.",
+      "Ask the listed blocking questions before proposing source changes."
+    ]
+  },
+  "findings": [],
+  "appliedPluginIds": [],
+  "skippedPluginIds": [],
+  "executor": "direct"
+}

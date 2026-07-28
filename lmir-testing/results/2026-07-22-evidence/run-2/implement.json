@@ -1,0 +1,307 @@
+{
+  "status": "conditional",
+  "plan": {
+    "id": "plan-5a6d404348faf214093cad1af35b16f4",
+    "projectId": "cli",
+    "schemaVersion": "v1",
+    "revision": 2,
+    "parentId": "plan-9f478f233a3719345a22a8f5bf429c41",
+    "unit": {
+      "id": "requested-refreshEditorEntityCache",
+      "canonicalId": "requested.refreshEditorEntityCache",
+      "scope": "function",
+      "language": "typescript",
+      "sourceRefs": []
+    },
+    "intent": {
+      "kind": "FunctionIntent",
+      "name": "refreshEditorEntityCache",
+      "language": "typescript",
+      "origin": "declared",
+      "visibility": "public",
+      "inputs": [
+        {
+          "name": "entityKey",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "void",
+        "explicit": true
+      },
+      "behavior": [
+        {
+          "when": "entityKey === \"\"",
+          "then": "throw invalid_entity_key",
+          "whenExpr": {
+            "op": "===",
+            "args": [
+              {
+                "op": "path",
+                "text": "entityKey"
+              },
+              {
+                "op": "lit",
+                "text": "\"\""
+              }
+            ]
+          }
+        }
+      ],
+      "sideEffects": [
+        "cache.invalidate"
+      ],
+      "failureModes": [
+        "invalid_entity_key"
+      ],
+      "constraints": [
+        "This is a bounded client-side teaching fixture related to Task 04, not a lifted Gutenberg implementation."
+      ]
+    },
+    "bindings": [],
+    "claims": [
+      {
+        "id": "mutation",
+        "kind": "effect.mutation",
+        "statement": "requested domain mutation",
+        "state": "declared",
+        "evidence": [
+          {
+            "id": "mutation-request",
+            "source": "user",
+            "producer": "cli.iir.implement",
+            "explanation": "The implement command is limited to domain mutations."
+          }
+        ]
+      },
+      {
+        "id": "failure-0",
+        "kind": "failure.",
+        "statement": "invalid_entity_key",
+        "state": "declared",
+        "evidence": [
+          {
+            "id": "failure-evidence-0",
+            "source": "user",
+            "producer": "cli.iir.implement",
+            "explanation": "Declared failure requirement."
+          }
+        ]
+      }
+    ],
+    "obligations": [
+      {
+        "id": "obligation-b7bed1e1157f95c53",
+        "kind": "audit",
+        "requirement": "audit.publish",
+        "state": "declared",
+        "evidence": [
+          {
+            "id": "evidence-a66335ce2743fec13",
+            "source": "policy",
+            "producer": "semantic.mutation.audit",
+            "field": "obligation",
+            "confidence": "high",
+            "explanation": "Declarative policy obligation."
+          }
+        ]
+      }
+    ],
+    "decisions": [],
+    "openQuestions": [],
+    "passRecords": [
+      {
+        "id": "pass-efe87ce5ca7bd2802",
+        "passId": "semantic.mutation.audit",
+        "version": "v1",
+        "phase": "constrain",
+        "inputs": [
+          "plan-9f478f233a3719345a22a8f5bf429c41"
+        ],
+        "outputs": [
+          "applied"
+        ],
+        "evidence": [
+          {
+            "id": "evidence-f447ea2b3adb69ec3",
+            "source": "policy",
+            "producer": "semantic.mutation.audit",
+            "field": "pass",
+            "confidence": "high",
+            "explanation": "Declarative policy pass: applied."
+          }
+        ]
+      },
+      {
+        "id": "pass-fc8d1690bee2dd6a2",
+        "passId": "semantic.mutation.provider-failure",
+        "version": "v1",
+        "phase": "constrain",
+        "inputs": [
+          "plan-9f478f233a3719345a22a8f5bf429c41"
+        ],
+        "outputs": [
+          "skipped"
+        ],
+        "evidence": [
+          {
+            "id": "evidence-6de7fd07c474ae563",
+            "source": "policy",
+            "producer": "semantic.mutation.provider-failure",
+            "field": "pass",
+            "confidence": "high",
+            "explanation": "Declarative policy pass: skipped."
+          }
+        ]
+      }
+    ],
+    "lifecycle": "resolved",
+    "provenance": [
+      {
+        "id": "intent",
+        "source": "user",
+        "producer": "semantic.plan",
+        "field": "intent",
+        "confidence": "high",
+        "explanation": "Initial declared intent."
+      }
+    ]
+  },
+  "recipe": {
+    "id": "recipe-f7de0f2701123ca6fa857633ae6bfab5",
+    "schemaVersion": "v1",
+    "planRevisionId": "plan-5a6d404348faf214093cad1af35b16f4",
+    "targetLanguage": "typescript",
+    "target": {
+      "unitId": "requested-refreshEditorEntityCache",
+      "canonicalId": "requested.refreshEditorEntityCache",
+      "mode": "new"
+    },
+    "imports": [],
+    "signature": {
+      "name": "refreshEditorEntityCache",
+      "visibility": "public",
+      "parameters": [
+        {
+          "name": "entityKey",
+          "type": "string"
+        }
+      ],
+      "returnType": "void",
+      "planRecordId": "intent"
+    },
+    "steps": [
+      {
+        "order": 1,
+        "operation": "throw invalid_entity_key",
+        "planRecordId": "intent"
+      }
+    ],
+    "effects": [
+      {
+        "name": "cache.invalidate",
+        "kind": "unclassified",
+        "required": true,
+        "forbidden": false,
+        "planRecordId": "intent",
+        "evidenceRefs": []
+      },
+      {
+        "name": "audit.publish",
+        "kind": "audit",
+        "required": true,
+        "forbidden": false,
+        "planRecordId": "obligation-b7bed1e1157f95c53",
+        "evidenceRefs": [
+          "evidence-a66335ce2743fec13"
+        ]
+      }
+    ],
+    "failures": [
+      {
+        "code": "invalid_entity_key",
+        "strategy": "",
+        "planRecordId": "failure-0"
+      }
+    ],
+    "constraints": [
+      {
+        "kind": "intent",
+        "requirement": "This is a bounded client-side teaching fixture related to Task 04, not a lifted Gutenberg implementation.",
+        "polarity": "required",
+        "planRecordId": "intent"
+      },
+      {
+        "kind": "audit",
+        "requirement": "audit.publish",
+        "polarity": "required",
+        "planRecordId": "obligation-b7bed1e1157f95c53"
+      }
+    ],
+    "rendererProfile": {
+      "language": "typescript",
+      "importStyle": "named",
+      "asyncFunctions": true,
+      "typedParameters": true
+    },
+    "evidenceRefs": [
+      "evidence-a66335ce2743fec13",
+      "failure-evidence-0",
+      "intent",
+      "mutation-request"
+    ],
+    "unresolvedQuestions": []
+  },
+  "source": "export async function refreshEditorEntityCache(entityKey: string): Promise\u003cvoid\u003e {\n  await cache.invalidate();\n  await audit.publish();\n  throw new Error(\"invalid_entity_key\");\n}\n",
+  "observed": {
+    "nodeId": "cli-candidate",
+    "language": "typescript",
+    "schemaVersion": "v1",
+    "observedIntent": {
+      "kind": "FunctionIntent",
+      "name": "refreshEditorEntityCache",
+      "language": "typescript",
+      "origin": "observed",
+      "visibility": "public",
+      "inputs": [
+        {
+          "name": "entityKey",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Promise\u003cvoid\u003e",
+        "explicit": true
+      },
+      "behavior": [],
+      "sideEffects": [
+        {
+          "name": "audit.publish",
+          "kind": "mutation",
+          "basis": "heuristic"
+        }
+      ],
+      "failureModes": [
+        {
+          "code": "invalid_entity_key",
+          "kind": "constructed"
+        }
+      ],
+      "constraints": []
+    },
+    "claims": [
+      {
+        "id": "lift-coverage",
+        "kind": "unknown",
+        "statement": "Standalone extractor does not yet expose plugin coverage metadata.",
+        "evidence": []
+      }
+    ],
+    "evidence": [],
+    "coverage": "partial"
+  },
+  "policyFindings": [],
+  "diagnostics": [
+    "Source lift is partial or unsupported; it cannot prove mandatory obligations."
+  ]
+}

@@ -1,0 +1,5 @@
+
+--- coverage: 3/3 expectations ---
+  [covered] refreshEditorEntityCache.behavior[0]: when entityKey === "" then throw invalid_entity_key
+  [covered] refreshEditorEntityCache.failureMode.invalid_entity_key: fails with invalid_entity_key
+  [covered] refreshEditorEntityCache.sideEffect.cache.invalidate: performs side effect cache.invalidate

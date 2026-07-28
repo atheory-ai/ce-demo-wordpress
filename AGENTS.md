@@ -58,6 +58,7 @@ Recommended local setup:
 ```bash
 cd plugins
 pnpm install
+pnpm run toolchain:install
 TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.0.1/src" \
   ZIG=/path/to/zig-0.13 \
   pnpm --filter php-language-plugin run build:grammar

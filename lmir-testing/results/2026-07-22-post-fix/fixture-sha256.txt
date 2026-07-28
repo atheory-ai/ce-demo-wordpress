@@ -1,0 +1,6 @@
+1e1096e8b5b12560689b1752b26f9d3757961605ef60706f686a1609da8fd9f8  /Volumes/Lukes/Jeremy/Sites/atheory-ce-demo-wordpress/lmir-testing/fixtures/intent.yaml
+fce20cb35091bee991816c039d8f5957ff1e515d6f4e96c0074991d57d261be1  /Volumes/Lukes/Jeremy/Sites/atheory-ce-demo-wordpress/lmir-testing/fixtures/missing-effect.ts
+8dc7ab1247766ae11cc90523c49e69018771805dc754453cfcf65283577b24ae  /Volumes/Lukes/Jeremy/Sites/atheory-ce-demo-wordpress/lmir-testing/fixtures/missing-return-type.ts
+835c4935870a4af15a9bec9a7d1043946bcb06e195f110483f3c36bad690d1b2  /Volumes/Lukes/Jeremy/Sites/atheory-ce-demo-wordpress/lmir-testing/fixtures/positive.ts
+5c899dc707ecba7fefcb7df8dd987e24df20bbd7ed95dd79d072f6899c02f64f  /Volumes/Lukes/Jeremy/Sites/atheory-ce-demo-wordpress/lmir-testing/fixtures/wrong-failure.ts
+82b05f55b313793d386ab2a5ab9a8dc516411bd26edb833a0aa1377c738068b7  /Volumes/Lukes/Jeremy/Sites/atheory-ce-demo-wordpress/lmir-testing/rules/forbid-empty-key-equality.yaml

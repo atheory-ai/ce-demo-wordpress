@@ -2,13 +2,15 @@
   "name": "atheory-ce-demo-wordpress-plugins",
   "private": true,
   "scripts": {
-    "build": "pnpm -r build",
+    "toolchain:install": "./scripts/install-extism-js.sh .tools/extism",
+    "toolchain:check": "./scripts/with-extism-toolchain.sh true",
+    "build": "./scripts/with-extism-toolchain.sh pnpm -r build",
     "test": "pnpm -r test",
     "clean": "pnpm -r clean"
   },
   "devDependencies": {
     "@atheory-ai/ce-plugin-sandbox": "^0.1.0",
-    "@atheory-ai/ce-plugin-sdk": "^0.4.0",
+    "@atheory-ai/ce-plugin-sdk": "^0.5.0",
     "@atheory-ai/wasm-plugin-toolkit": "^0.0.4",
     "typescript": "^5.0.0",
     "vitest": "^1.6.1"

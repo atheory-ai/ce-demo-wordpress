@@ -1,0 +1,39 @@
+{
+  "kind": "FunctionIntent",
+  "name": "normalizeKey",
+  "language": "typescript",
+  "origin": "inferred",
+  "visibility": "public",
+  "inputs": [
+    {
+      "name": "key",
+      "type": "string"
+    }
+  ],
+  "returns": {
+    "type": "ValidationResult\u003cstring\u003e",
+    "explicit": true
+  },
+  "behavior": [
+    {
+      "when": "The input key is trimmed",
+      "then": "Use the trimmed value as the normalized key"
+    },
+    {
+      "when": "The normalized key is empty",
+      "then": "Return a failed ValidationResult with error code EMPTY_KEY"
+    },
+    {
+      "when": "The normalized key is not empty",
+      "then": "Return a successful ValidationResult containing the normalized key"
+    }
+  ],
+  "sideEffects": [],
+  "failureModes": [
+    "EMPTY_KEY"
+  ],
+  "constraints": [
+    "Whitespace is trimmed from both ends of the input key",
+    "The function performs no side effects"
+  ]
+}
