@@ -29,6 +29,16 @@ project:
   git_url: git@github.com:atheory-ai/ce-demo-wordpress.git
 
 plugins:
+  # Production activation is explicit: it avoids a redundant startup walk and
+  # includes semantic-policy plugins which have no file extension to discover.
+  # Manifest dependencies still determine execution order.
+  enabled:
+    - com.atheory-ai.wordpress-demo.php
+    - com.atheory-ai.wordpress-demo.conventions
+    - com.atheory-ai.wordpress-demo.woocommerce-conventions
+    - com.atheory-ai.wordpress-demo.gutenberg-conventions
+    - com.atheory-ai.typescript
+    - com.atheory-ai.python
   installed:
     # Build these demo-owned artifacts first: `cd plugins && pnpm install && pnpm build`.
     # PHP Language supplies the CST parser; the convention plugin adds WordPress
