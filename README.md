@@ -94,13 +94,21 @@ first demo is source-understanding only.
 
 ## CE Plugin Build And Fixture Check
 
-The CE branch currently provides two additive PHP plugins:
+The CE branch provides an ordered PHP composition:
 
 - `plugins/php-language` parses PHP and emits structural file, namespace,
-  class, method, function, and import facts.
-- `plugins/wordpress-conventions` emits CST-grounded facts for hooks, REST
-  routes, and block registration. It does not claim runtime behavior or PHP IIR
-  verification coverage.
+  class, method, function, and import facts plus generic language-semantic
+  heritage evidence and explicit coverage.
+- `plugins/wordpress-conventions` is a declared `file.decorate` plugin: CE
+  runs it after PHP's canonical file contribution, not according to YAML or
+  writer timing. It emits CST-grounded facts for hooks, REST routes, and block
+  registration. Those framework concepts use CE's generic semantic occurrence,
+  canonical-entity, relationship, outcome, and coverage model rather than
+  plugin-private graph node types; it does not claim runtime behavior or PHP
+  IIR verification coverage.
+- `plugins/woocommerce-conventions` declares that it depends on both PHP and
+  WordPress, so any future CE-owned project callback is scheduled after those
+  foundations as well.
 
 Prerequisites are Node 22+, pnpm, Go, and Zig 0.13.x. The demo installs the
 pinned [Extism JavaScript PDK](https://github.com/extism/js-pdk) compiler and
@@ -110,8 +118,8 @@ tree-sitter corpus pinned by CE (`github.com/malivvan/tree-sitter@v0.0.1`), whos
 PHP grammar has language ABI 14. Newer upstream PHP grammars currently emit ABI
 15 and are incompatible with CE's embedded tree-sitter core.
 
-This demo release requires CE `v0.6.0` or later and the published
-`@atheory-ai/ce-plugin-sdk` `^0.5.0`. The PHP grammar is
+This demo release requires the CE release containing `core.semantics/v1` and
+the published `@atheory-ai/ce-plugin-sdk` `^0.8.0`. The PHP grammar is
 still a demo-owned side module, intentionally built from the pinned ABI-14
 corpus below.
 
@@ -157,9 +165,12 @@ mkdir -p /tmp/ce-wordpress-demo-data
   index demo/fixtures/php-iir --full
 ```
 
-The expected result is one indexed file with structural plus convention facts
-(currently 11 nodes and 10 edges). This is a regression harness, not a benchmark
-result. CE defects found through this check are tracked in issues #95–#98.
+The expected result is one indexed file with structural facts, raw semantic
+evidence, canonical semantic entities, materialized framework relationships,
+and explicit capability coverage. Use `ce_semantic_search`,
+`ce_semantic_context`, and `ce_semantic_coverage` to inspect them. This is a
+regression harness, not a benchmark result. CE defects found through this check
+are tracked in issues #95–#98.
 
 ## Running The Baseline
 

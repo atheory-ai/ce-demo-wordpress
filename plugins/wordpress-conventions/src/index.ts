@@ -1,13 +1,28 @@
 import { definePlugin } from "@atheory-ai/ce-plugin-sdk"
+import type { ExtractionResult } from "@atheory-ai/ce-plugin-sdk"
 import { extract } from "./extract.js"
 import { match } from "./match.js"
+
+// This is a genuine file decorator: PHP has already produced and CE has
+// canonicalized the structural file contribution. WordPress facts remain
+// additive, but their phase and global dependency are now explicit instead of
+// relying on configuration order or writer timing.
+const decorate = (filePath: string, content: string, tree: Parameters<typeof extract>[2], contribution: ExtractionResult, sourceAnchor?: Parameters<typeof extract>[3]) =>
+  extract(filePath, content, tree, sourceAnchor, contribution)
 
 export default definePlugin({
   id: "com.atheory-ai.wordpress-demo.conventions",
   name: "WordPress Conventions (Demo)",
-  version: "0.3.0",
-	requires: ["cst:php", "facts:php-structure"],
-	enriches: ["php"],
+  version: "0.6.0",
+  dependencies: {
+    plugins: ["com.atheory-ai.wordpress-demo.php"],
+  },
+  index: {
+    phase: "file.decorate",
+    scope: "file",
+    requires: ["artifact:source", "artifact:cst:php", "facts:php-structure"],
+    enriches: ["php"],
+  },
   // These are implementation-packet requirements. CE only activates a policy
   // after model/agent input or graph resolution has established every required
   // controlled semantic tag; no policy guesses a request surface or authority.
@@ -112,7 +127,9 @@ export default definePlugin({
     // PHP Language owns parsing and declares php-grammar.wasm. This additive
     // plugin receives that same CST and contributes only framework facts.
     extensions: [".php", ".phtml"],
+    customMatch: true,
     match,
     extract,
+    decorate,
   },
 })

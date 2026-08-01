@@ -1,7 +1,7 @@
 {
   "name": "php-language-plugin",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "build": "ce-plugin-build --plugin . --output dist/php-language.wasm",
@@ -11,6 +11,6 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@atheory-ai/ce-plugin-sdk": "^0.5.0"
+    "@atheory-ai/ce-plugin-sdk": "^0.8.0"
   }
 }

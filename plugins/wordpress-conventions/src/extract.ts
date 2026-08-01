@@ -1,5 +1,5 @@
-import { childByField, edgeID, firstDescendantByType, nodeID, walk } from "@atheory-ai/ce-plugin-sdk"
-import type { Edge, ExtractionResult, LanguageDefinition, Node, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
+import { childByField, firstDescendantByType, semanticCoverage, semanticOccurrence, semanticRelationship, structuralEntity, unresolvedSemanticRelationship, walk } from "@atheory-ai/ce-plugin-sdk"
+import type { ExtractionResult, Node, RawEvidence, RawSemanticRelationshipEvidence, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
 
 const HOOK_APIS = new Set(["add_action", "add_filter", "do_action", "apply_filters"])
 const STORE_API_EXTENSION_APIS = new Set([
@@ -35,39 +35,41 @@ const CART_MUTATIONS: Record<string, string> = {
  * preserve expressions that cannot be statically resolved; they are navigation
  * evidence, not a runtime or security verdict.
  */
-export const extract: LanguageDefinition["extract"] = (filePath, _content, tree, sourceAnchor): ExtractionResult => {
-	const nodes: Node[] = []
-	const edges: Edge[] = []
-	// CE owns this anchor. The empty-project ID is deliberately only a stable
-	// reference token; CE remaps it to the host-created project:file:<path> node.
-	const fileID = nodeID("", "file", sourceAnchor?.canonicalID ?? filePath)
-  if (!tree) return { nodes, edges }
+export const extract = (
+  filePath: string,
+  _content: string,
+  tree: SyntaxNode | null,
+  _sourceAnchor?: { type: "file"; canonicalID: string },
+  contribution?: ExtractionResult,
+): ExtractionResult => {
+  const evidence: RawEvidence = {}
+  const capabilities = new Map<string, { observed: number; unresolved: number }>()
+  const declaredCapabilities = ["wordpress.hooks", "wordpress.rest_routes", "gutenberg.blocks", "wordpress.security_boundaries", "woocommerce.checkout_fields", "woocommerce.store_api_extensions", "woocommerce.cart_effects"]
+  if (!tree) {
+    evidence.semantic_coverage = declaredCapabilities.map((capability) => semanticCoverage("com.atheory-ai.wordpress-demo.conventions", capability, "unavailable", { reason: "No PHP CST was available." }))
+    return { nodes: [], edges: [], evidence }
+  }
 
   const addFact = (type: string, label: string, call: SyntaxNode, properties: Record<string, unknown>): string => {
-    const canonicalID = `wordpress:${type}:${label}:${filePath}:${call.startByte}`
-    const id = nodeID("", type, canonicalID)
-    nodes.push({
-      id,
-      type,
+    const definition = semanticDefinition(type, label, properties)
+    const relationships = semanticRelationships(type, properties, contribution?.nodes ?? [])
+    const unresolved = relationships.filter((relationship) => relationship.status !== "resolved").length
+    const counts = capabilities.get(definition.capability) ?? { observed: 0, unresolved: 0 }
+    counts.observed++
+    counts.unresolved += unresolved
+    capabilities.set(definition.capability, counts)
+    ;(evidence.semantics ??= []).push(semanticOccurrence({
+      producer: "com.atheory-ai.wordpress-demo.conventions",
+      kind: definition.occurrenceKind,
+      entityKind: definition.entityKind,
+      entityKey: definition.entityKey,
       label,
-      canonicalID,
-      sourceClass: "structural",
-      properties: {
-        file_path: filePath,
-        start_byte: call.startByte,
-        start_line: call.startPosition.row,
-        ...properties,
-      },
-    })
-    edges.push({
-      id: edgeID(fileID, "contains", id),
-      sourceID: fileID,
-      targetID: id,
-      type: "contains",
-      sourceClass: "structural",
-      properties: {},
-    })
-    return id
+      startByte: call.startByte,
+      endByte: call.endByte,
+      properties: scalarProperties(properties),
+      relationships,
+    }))
+    return definition.entityKey
   }
 
   walk(tree, (call) => {
@@ -78,10 +80,72 @@ export const extract: LanguageDefinition["extract"] = (filePath, _content, tree,
     if (call.type === "member_call_expression") extractCartEffect(call, addFact)
   })
 
-  return deduplicate(nodes, edges)
+  evidence.semantic_coverage = declaredCapabilities.map((capability) => {
+    const counts = capabilities.get(capability) ?? { observed: 0, unresolved: 0 }
+    return semanticCoverage(
+      "com.atheory-ai.wordpress-demo.conventions",
+      capability,
+      counts.observed === 0 ? "not_applicable" : counts.unresolved === 0 ? "complete" : "partial",
+      { observed: counts.observed, emitted: counts.observed, unresolved: counts.unresolved },
+    )
+  })
+  return { nodes: [], edges: [], evidence }
 }
 
 type AddFact = (type: string, label: string, call: SyntaxNode, properties: Record<string, unknown>) => string
+
+function semanticDefinition(type: string, label: string, properties: Record<string, unknown>): { capability: string; occurrenceKind: string; entityKind: string; entityKey: string } {
+  switch (type) {
+    case "wordpress_hook": return { capability: "wordpress.hooks", occurrenceKind: "wordpress.hook_call", entityKind: "wordpress.hook", entityKey: label }
+    case "wordpress_route": return { capability: "wordpress.rest_routes", occurrenceKind: "wordpress.route_registration", entityKind: "http.route", entityKey: `${String(properties.methods ?? "ANY")} ${label}` }
+    case "wordpress_block": return { capability: "gutenberg.blocks", occurrenceKind: "gutenberg.block_registration", entityKind: "gutenberg.block", entityKey: label }
+    case "wordpress_security_boundary": return { capability: "wordpress.security_boundaries", occurrenceKind: "wordpress.security_boundary", entityKind: "wordpress.security_api", entityKey: `${String(properties.category ?? "boundary")}:${label}` }
+    case "woocommerce_checkout_field": return { capability: "woocommerce.checkout_fields", occurrenceKind: "woocommerce.checkout_field_registration", entityKind: "woocommerce.checkout_field", entityKey: label }
+    case "woocommerce_store_api_extension": return { capability: "woocommerce.store_api_extensions", occurrenceKind: "woocommerce.store_api_extension_registration", entityKind: "woocommerce.store_api_extension", entityKey: `${label}:${String(properties.endpoint ?? properties.namespace ?? "")}` }
+    case "woocommerce_cart_effect": return { capability: "woocommerce.cart_effects", occurrenceKind: "woocommerce.cart_effect", entityKind: "woocommerce.cart_operation", entityKey: label }
+    default: return { capability: "wordpress.unknown", occurrenceKind: type, entityKind: type, entityKey: label }
+  }
+}
+
+function semanticRelationships(type: string, properties: Record<string, unknown>, nodes: Node[]): RawSemanticRelationshipEvidence[] {
+  const relationships: RawSemanticRelationshipEvidence[] = []
+  const addCallable = (relation: string, expression: unknown): void => {
+    const value = typeof expression === "string" ? expression : ""
+    if (!value) return
+    const normalized = value.replace(/^(?:'|")|(?:'|")$/g, "")
+    const candidates = nodes.filter((node) => node.type === "symbol" && (node.label === normalized || node.label.endsWith(`.${normalized}`)))
+    if (candidates.length === 1) {
+      relationships.push(semanticRelationship(relation, structuralEntity("symbol", candidates[0].canonicalID), { method: "same-file-symbol", confidence: "high" }))
+    } else {
+      relationships.push(unresolvedSemanticRelationship(relation, value, candidates.length > 1 ? "ambiguous" : callableKindFromText(value) === "closure" ? "dynamic" : "unresolved", candidates.map((candidate) => candidate.canonicalID)))
+    }
+  }
+  if (type === "wordpress_hook" && properties.phase === "registration") addCallable("subscribes_with", properties.callback)
+  if (type === "wordpress_hook" && properties.phase === "dispatch") relationships.push(semanticRelationship("dispatches", { entity_kind: "wordpress.hook", entity_key: String(properties.hook ?? "") }, { method: "literal-hook-name", confidence: "high" }))
+  if (type === "wordpress_route") {
+    addCallable("handles", properties.callback)
+    addCallable("authorizes_with", properties.permission_callback)
+  }
+  if (type === "wordpress_block") addCallable("renders_with", properties.render_callback)
+  if (type === "woocommerce_checkout_field") {
+    addCallable("sanitizes_with", properties.sanitize_callback)
+    addCallable("validates_with", properties.validate_callback)
+  }
+  if (type === "woocommerce_store_api_extension") {
+    addCallable("provides_data_with", properties.data_callback)
+    addCallable("provides_schema_with", properties.schema_callback)
+    addCallable("updates_with", properties.update_callback)
+  }
+  return relationships
+}
+
+function scalarProperties(properties: Record<string, unknown>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const [key, value] of Object.entries(properties)) {
+    if (value !== undefined && value !== null && ["string", "number", "boolean"].includes(typeof value)) result[key] = String(value)
+  }
+  return result
+}
 
 function extractFunctionCall(call: SyntaxNode, filePath: string, addFact: AddFact): void {
   const functionNode = childByField(call, "function") ?? namedChildren(call).find((child) =>
@@ -274,13 +338,4 @@ function storeApiOperation(api: string): string {
   if (api.endsWith("register_endpoint_data")) return "register_endpoint_data"
   if (api.endsWith("register_update_callback")) return "register_update_callback"
   return "register_payment_requirements"
-}
-
-function deduplicate(nodes: Node[], edges: Edge[]): ExtractionResult {
-  const nodeIDs = new Set<string>()
-  const edgeIDs = new Set<string>()
-  return {
-    nodes: nodes.filter((node) => !nodeIDs.has(node.id) && (nodeIDs.add(node.id), true)),
-    edges: edges.filter((edge) => !edgeIDs.has(edge.id) && (edgeIDs.add(edge.id), true)),
-  }
 }

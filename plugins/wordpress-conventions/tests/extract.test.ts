@@ -33,21 +33,23 @@ describe("WordPress convention extraction", () => {
       call("register_rest_route", [node("string", "'store/v1'"), node("string", "'/products'")]),
       call("register_block_type", [node("string", "'demo/catalog'")]),
     ])
-    const nodes = extract("plugins/catalog.php", "", tree).nodes
-    expect(nodes.map((item) => item.type)).toEqual(expect.arrayContaining(["wordpress_hook", "wordpress_route", "wordpress_block"]))
-    expect(nodes.find((item) => item.type === "wordpress_hook")?.properties).toMatchObject({ family: "woocommerce", direction: "registration" })
+    const evidence = extract("plugins/catalog.php", "", tree).evidence
+    expect(evidence?.semantics?.map((item) => item.entity_kind)).toEqual(expect.arrayContaining(["wordpress.hook", "http.route", "gutenberg.block"]))
+    expect(evidence?.semantics?.find((item) => item.entity_kind === "wordpress.hook")?.properties).toMatchObject({ family: "woocommerce", direction: "registration" })
   })
 
   it("emits no competing file anchor without a parsed tree", () => {
     const result = extract("plugins/catalog.php", "add_action('x', 'y')", null)
     expect(result.nodes).toHaveLength(0)
     expect(result.edges).toHaveLength(0)
+    expect(result.evidence?.semantic_coverage?.every((coverage) => coverage.status === "unavailable")).toBe(true)
   })
 
-  it("uses the host-provided canonical source anchor for convention edges", () => {
+  it("leaves source anchoring to CE semantic projection", () => {
     const tree = node("program", "", null, [call("do_action", [node("string", "'demo_ready'")])])
     const result = extract("plugins/catalog.php", "", tree, { type: "file", canonicalID: "canonical/catalog.php" })
-    expect(result.edges[0]?.sourceID).toBe("file:canonical/catalog.php")
+    expect(result.edges).toHaveLength(0)
+    expect(result.evidence?.semantics?.[0]).toMatchObject({ entity_kind: "wordpress.hook", entity_key: "demo_ready" })
   })
 
   it("uses PHP's named call children when grammar field names are unavailable", () => {
@@ -57,14 +59,14 @@ describe("WordPress convention extraction", () => {
         node("arguments", "", null, [node("string", "'demo_ready'")]),
       ]),
     ])
-    expect(extract("plugins/catalog.php", "", tree).nodes.filter((item) => item.type === "wordpress_hook")).toHaveLength(1)
+    expect(extract("plugins/catalog.php", "", tree).evidence?.semantics?.filter((item) => item.entity_kind === "wordpress.hook")).toHaveLength(1)
   })
 
   it("unwraps the pinned PHP grammar's argument nodes", () => {
     const tree = node("program", "", null, [
       call("apply_filters", [node("argument", "", null, [node("string", "'demo_value'")])]),
     ])
-    expect(extract("plugins/catalog.php", "", tree).nodes.find((item) => item.type === "wordpress_hook")?.label).toBe("demo_value")
+    expect(extract("plugins/catalog.php", "", tree).evidence?.semantics?.find((item) => item.entity_kind === "wordpress.hook")?.label).toBe("demo_value")
   })
 
   it("preserves REST callback and permission configuration without resolving dynamic callables", () => {
@@ -81,7 +83,10 @@ describe("WordPress convention extraction", () => {
       ]),
     ])
 
-    const route = extract("plugins/catalog.php", "", tree).nodes.find((item) => item.type === "wordpress_route")
+    const route = extract("plugins/catalog.php", "", tree, undefined, {
+      nodes: [{ id: "handler", type: "symbol", label: "get_catalog", canonicalID: "Demo:global:function:get_catalog", sourceClass: "structural", properties: {} }],
+      edges: [],
+    }).evidence?.semantics?.find((item) => item.entity_kind === "http.route")
     expect(route?.properties).toMatchObject({
       namespace: "demo/v1",
       route: "/catalog",
@@ -91,6 +96,10 @@ describe("WordPress convention extraction", () => {
       permission_callback_presence: "observed",
       args_declaration: "$args",
     })
+    expect(route?.relationships).toEqual(expect.arrayContaining([
+      expect.objectContaining({ relation: "handles", status: "resolved", target: expect.objectContaining({ canonical_id: "Demo:global:function:get_catalog" }) }),
+      expect.objectContaining({ relation: "authorizes_with", status: "unresolved" }),
+    ]))
   })
 
   it("uses the PHP grammar's named array key and value fields when available", () => {
@@ -105,7 +114,7 @@ describe("WordPress convention extraction", () => {
       ]),
     ])
 
-    const route = extract("plugins/catalog.php", "", tree).nodes.find((item) => item.type === "wordpress_route")
+    const route = extract("plugins/catalog.php", "", tree).evidence?.semantics?.find((item) => item.entity_kind === "http.route")
     expect(route?.properties).toMatchObject({
       methods: "WP_REST_Server::READABLE",
       permission_callback: "__return_true",
@@ -141,19 +150,19 @@ describe("WordPress convention extraction", () => {
     ])
 
     const result = extract("plugins/catalog.php", "", tree)
-    expect(result.nodes.find((item) => item.type === "woocommerce_checkout_field")?.properties).toMatchObject({
+    expect(result.evidence?.semantics?.find((item) => item.entity_kind === "woocommerce.checkout_field")?.properties).toMatchObject({
       id: "'demo/gift-message'",
       location: "'order'",
       field_type: "'text'",
       required: "true",
       sanitize_callback: "sanitize_text_field",
-      observed_only: true,
+      observed_only: "true",
     })
-    expect(result.nodes.find((item) => item.type === "wordpress_block")?.properties).toMatchObject({
+    expect(result.evidence?.semantics?.find((item) => item.entity_kind === "gutenberg.block")?.properties).toMatchObject({
       render_callback: "'render_catalog'",
       editor_script: "'demo-catalog-editor'",
     })
-    expect(result.nodes.find((item) => item.type === "woocommerce_store_api_extension")?.properties).toMatchObject({
+    expect(result.evidence?.semantics?.find((item) => item.entity_kind === "woocommerce.store_api_extension")?.properties).toMatchObject({
       operation: "register_endpoint_data",
       endpoint: "CartSchema::IDENTIFIER",
       namespace: "'demo'",
@@ -174,11 +183,11 @@ describe("WordPress convention extraction", () => {
     ])
 
     const result = extract("plugins/catalog.php", "", tree)
-    expect(result.nodes.filter((item) => item.type === "wordpress_security_boundary").map((item) => item.properties.category)).toEqual(expect.arrayContaining(["capability_check", "sanitize"]))
-    expect(result.nodes.find((item) => item.type === "woocommerce_cart_effect")?.properties).toMatchObject({
+    expect(result.evidence?.semantics?.filter((item) => item.entity_kind === "wordpress.security_api").map((item) => item.properties?.category)).toEqual(expect.arrayContaining(["capability_check", "sanitize"]))
+    expect(result.evidence?.semantics?.find((item) => item.entity_kind === "woocommerce.cart_operation")?.properties).toMatchObject({
       operation: "add_item",
       receiver: "$cart",
-      observed_only: true,
+      observed_only: "true",
     })
   })
 })

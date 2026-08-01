@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "@atheory-ai/ce-plugin-sandbox": "^0.1.0",
-    "@atheory-ai/ce-plugin-sdk": "^0.5.0",
+    "@atheory-ai/ce-plugin-sdk": "^0.8.0",
     "@atheory-ai/wasm-plugin-toolkit": "^0.0.4",
     "typescript": "^5.0.0",
     "vitest": "^1.6.1"

@@ -5,7 +5,10 @@ import { definePlugin } from "@atheory-ai/ce-plugin-sdk"
 export default definePlugin({
   id: "com.atheory-ai.wordpress-demo.gutenberg-conventions",
   name: "Gutenberg Conventions (Demo)",
-  version: "0.3.0",
+  version: "0.6.0",
+  dependencies: {
+    plugins: ["com.atheory-ai.typescript"],
+  },
   semanticPolicies: {
     schemaVersion: "v1",
     languages: ["typescript", "javascript"],

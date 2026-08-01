@@ -12,7 +12,7 @@ function node(type: string, text = "", fieldName: string | null = null, children
 }
 
 describe("PHP structural extraction", () => {
-  it("extracts declarations, inheritance, methods, and imports from the CST", () => {
+  it("extracts declarations, inheritance, methods, and raw namespace references from the CST", () => {
     const tree = node("program", "", null, [
       node("namespace_use_declaration", "", null, [node("namespace_use_clause", "", null, [node("qualified_name", "Vendor\\Package")])]),
       node("class_declaration", "", null, [
@@ -24,12 +24,105 @@ describe("PHP structural extraction", () => {
     ])
     const result = extract("src/catalog.php", "<?php", tree)
     expect(result.nodes.filter((item) => item.type === "symbol").map((item) => item.label)).toEqual(expect.arrayContaining(["Catalog", "Catalog.register", "bootstrap"]))
-    expect(result.nodes.find((item) => item.canonicalID === "Vendor\\Package")).toBeTruthy()
+    expect(result.evidence?.references?.find((item) => item.raw_specifier === "Vendor\\Package")?.space).toBe("namespace")
     expect(result.nodes.find((item) => item.label === "Catalog")?.properties.extends).toBe("BaseCatalog")
+    expect(result.evidence?.semantics?.[0]).toMatchObject({
+      kind: "language.class_heritage",
+      entity_kind: "php.class",
+      entity_key: "src/catalog.php:Catalog",
+      relationships: [{ relation: "extends", status: "unresolved", expression: "BaseCatalog" }],
+    })
+  })
+
+  it("emits static include evidence and leaves computed includes dynamic", () => {
+    const include = node("require_expression", "require __DIR__ . '/bootstrap.php';")
+    const computed = node("require_expression", "$loader($path)")
+    const result = extract("src/index.php", "<?php", node("program", "", null, [include, computed]))
+    const staticReference = result.evidence?.references?.find((item) => item.import_form === "require" && item.kind === "relative_path")
+    expect(staticReference?.space).toBe("file")
+    expect(staticReference?.static_candidates).toEqual(["./bootstrap.php"])
+    const dynamicReference = result.evidence?.references?.find((item) => item.import_form === "require" && item.kind === "dynamic")
+    expect(dynamicReference).toBeTruthy()
+  })
+
+  it("preserves grouped and aliased namespace-use references", () => {
+    const grouped = node("namespace_use_declaration", "use Demo\\Domain\\{Order, Cart as CartAlias};", null, [
+      node("namespace_use_group", "", null, [
+        node("namespace_use_clause", "", null, [node("qualified_name", "Order")]),
+        node("namespace_use_clause", "", null, [node("qualified_name", "Cart"), node("name", "CartAlias", "alias")]),
+      ]),
+    ])
+    const result = extract("src/index.php", "<?php", node("program", "", null, [grouped]))
+    expect(result.evidence?.references?.map((item) => item.raw_specifier))
+      .toEqual(expect.arrayContaining(["Demo\\Domain\\Order", "Demo\\Domain\\Cart"]))
   })
 
   it("never invents declarations when a grammar tree is unavailable", () => {
     expect(extract("src/catalog.php", "function invented() {}", null).nodes).toHaveLength(1)
+  })
+
+  it("preserves direct function calls for host-owned resolution", () => {
+    const call = node("function_call_expression", "helper()", null, [node("name", "helper", "function")])
+    const caller = node("function_definition", "", null, [
+      node("name", "run", "name"),
+      node("compound_statement", "", "body", [call]),
+    ])
+    const callee = node("function_definition", "", null, [node("name", "helper", "name")])
+    const result = extract("src/calls.php", "<?php", node("program", "", null, [caller, callee]))
+    expect(result.evidence?.calls?.[0]).toMatchObject({
+      callee_expression: "helper",
+      kind: "local",
+      candidate_names: ["helper"],
+    })
+    expect(result.evidence?.call_scopes).toHaveLength(2)
+    expect(result.edges.some((item) => item.type === "calls")).toBe(false)
+  })
+
+  it("preserves static class calls through a use alias for host resolution", () => {
+    const use = node("namespace_use_declaration", "use Demo\\Service as ServiceAlias;", null, [
+      node("namespace_use_clause", "", null, [node("qualified_name", "Demo\\Service"), node("name", "ServiceAlias", "alias")]),
+    ])
+    const call = node("scoped_call_expression", "ServiceAlias::handle()", null, [
+      node("name", "ServiceAlias", "scope"),
+      node("name", "handle", "name"),
+    ])
+    const caller = node("function_definition", "", null, [
+      node("name", "run", "name"), node("compound_statement", "", "body", [call]),
+    ])
+    const result = extract("src/calls.php", "<?php", node("program", "", null, [use, caller]))
+    expect(result.evidence?.calls?.[0]).toMatchObject({
+      kind: "imported",
+      reference_specifier: "Demo\\Service",
+      candidate_names: ["Service.handle"],
+    })
+    expect(result.evidence?.references?.[0]?.bindings)
+      .toEqual([{ localName: "ServiceAlias", remoteName: "Service" }])
+  })
+
+  it("keeps same-named use aliases isolated across namespace scopes", () => {
+    const namespace = (name: string, target: string): SyntaxNode => node("namespace_definition", "", null, [
+      node("name", name, "name"),
+      node("declaration_list", "", "body", [
+        node("namespace_use_declaration", `use ${target} as Service;`, null, [
+          node("namespace_use_clause", "", null, [node("qualified_name", target), node("name", "Service", "alias")]),
+        ]),
+        node("function_definition", "", null, [
+          node("name", "run", "name"),
+          node("compound_statement", "", "body", [
+            node("scoped_call_expression", "Service::handle()", null, [
+              node("name", "Service", "scope"),
+              node("name", "handle", "name"),
+            ]),
+          ]),
+        ]),
+      ]),
+    ])
+    const result = extract("src/namespaces.php", "<?php", node("program", "", null, [
+      namespace("Demo\\One", "Vendor\\One\\Service"),
+      namespace("Demo\\Two", "Vendor\\Two\\Service"),
+    ]))
+    expect(result.evidence?.calls?.map((call) => call.reference_specifier))
+      .toEqual(["Vendor\\One\\Service", "Vendor\\Two\\Service"])
   })
 
   it("keeps root-level and same-named declarations in separate file identities", () => {
@@ -70,7 +163,7 @@ describe("PHP structural extraction", () => {
 
     const result = extract("boundaries.php", "<?php", tree)
     expect(result.nodes.find((item) => item.type === "symbol")?.canonicalID)
-      .toBe("boundaries.php:Demo\\Store:function:demo_update_cart")
+      .toBe("Demo\\Store:function:demo_update_cart")
   })
 
   it("uses the recognized namespace declaration text when no name child is serialized", () => {
@@ -81,7 +174,7 @@ describe("PHP structural extraction", () => {
     ])
     const result = extract("boundaries.php", "<?php", tree)
     expect(result.nodes.find((item) => item.type === "symbol")?.canonicalID)
-      .toBe("boundaries.php:Demo\\Store:function:demo_update_cart")
+      .toBe("Demo\\Store:function:demo_update_cart")
   })
 
   it("uses a bare namespace token carried by the recognized declaration node", () => {
@@ -92,7 +185,7 @@ describe("PHP structural extraction", () => {
     ])
     const result = extract("boundaries.php", "<?php", tree)
     expect(result.nodes.find((item) => item.type === "symbol")?.canonicalID)
-      .toBe("boundaries.php:Demo\\Store:function:demo_update_cart")
+      .toBe("Demo\\Store:function:demo_update_cart")
   })
 
   it("falls back to the in-scope source namespace when the serialized CST has no wrapper", () => {
@@ -102,6 +195,6 @@ describe("PHP structural extraction", () => {
     const content = "<?php\nnamespace Demo\\Store;\nfunction demo_update_cart() {}"
     const result = extract("boundaries.php", content, tree)
     expect(result.nodes.find((item) => item.type === "symbol")?.canonicalID)
-      .toBe("boundaries.php:Demo\\Store:function:demo_update_cart")
+      .toBe("Demo\\Store:function:demo_update_cart")
   })
 })

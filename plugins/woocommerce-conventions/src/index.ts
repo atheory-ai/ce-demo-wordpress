@@ -5,9 +5,13 @@ import { definePlugin } from "@atheory-ai/ce-plugin-sdk"
 export default definePlugin({
   id: "com.atheory-ai.wordpress-demo.woocommerce-conventions",
   name: "WooCommerce Conventions (Demo)",
-  version: "0.3.0",
-  requires: ["cst:php", "facts:php-structure"],
-  enriches: ["php"],
+  version: "0.6.0",
+  dependencies: {
+    plugins: [
+      "com.atheory-ai.wordpress-demo.php",
+      "com.atheory-ai.wordpress-demo.conventions",
+    ],
+  },
   semanticPolicies: {
     schemaVersion: "v1",
     languages: ["php"],
