@@ -197,7 +197,7 @@ function extractFunctionCall(call: SyntaxNode, filePath: string, addFact: AddFac
     const options = arrayEntries(args[2])
     const routePath = namespaceLiteral && routeLiteral ? normalizeRoutePath(namespaceLiteral, routeLiteral) : `${namespaceExpression} ${routeExpression}`
     const methods = normalizeRouteMethods(options.methods)
-    const entityKey = routePath && methods ? `${methods} ${routePath}` : undefined
+    const entityKey = namespaceLiteral && routeLiteral && methods ? `${methods} ${routePath}` : undefined
     addFact("wordpress_route", routePath, call, {
       api: functionName,
       namespace,

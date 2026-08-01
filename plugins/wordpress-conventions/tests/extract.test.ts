@@ -178,12 +178,13 @@ describe("WordPress convention extraction", () => {
     const tree = node("program", "", null, [
       call("do_action", [node("binary_expression", "'prefix_' . $suffix", null, [node("string", "'prefix_'"), node("variable_name", "$suffix")])]),
       call("register_rest_route", [node("variable_name", "$namespace"), node("variable_name", "$route"), array([entry("methods", node("variable_name", "$methods"))])]),
+      call("register_rest_route", [node("variable_name", "$namespace"), node("string", "'/items'"), array([entry("methods", node("string", "'GET'"))])]),
       call("register_block_type", [node("variable_name", "$block_json_file")]),
       call("woocommerce_register_additional_checkout_field", [array([entry("id", node("variable_name", "$id"))])]),
     ])
 
     const semantics = extract("plugins/dynamic.php", "", tree).evidence?.semantics ?? []
-    expect(semantics).toHaveLength(4)
+    expect(semantics).toHaveLength(5)
     for (const occurrence of semantics) {
       expect(occurrence.entity_kind).toBeUndefined()
       expect(occurrence.entity_key).toBeUndefined()
