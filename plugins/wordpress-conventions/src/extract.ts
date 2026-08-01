@@ -1,5 +1,5 @@
 import { childByField, firstDescendantByType, semanticCoverage, semanticOccurrence, semanticRelationship, structuralEntity, unresolvedSemanticRelationship, walk } from "@atheory-ai/ce-plugin-sdk"
-import type { ExtractionResult, Node, RawEvidence, RawSemanticRelationshipEvidence, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
+import type { ExtractionResult, Node, RawEvidence, RawSemanticRelationshipEvidence, SemanticResolutionStatus, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
 
 const HOOK_APIS = new Set(["add_action", "add_filter", "do_action", "apply_filters"])
 const STORE_API_EXTENSION_APIS = new Set([
@@ -50,10 +50,12 @@ export const extract = (
     return { nodes: [], edges: [], evidence }
   }
 
-  const addFact = (type: string, label: string, call: SyntaxNode, properties: Record<string, unknown>): string => {
+  const addFact: AddFact = (type, label, call, properties, identity) => {
     const definition = semanticDefinition(type, label, properties)
-    const relationships = semanticRelationships(type, properties, contribution?.nodes ?? [])
-    const unresolved = relationships.filter((relationship) => relationship.status !== "resolved").length
+    const entityKey = identity && Object.hasOwn(identity, "entityKey") ? identity.entityKey : definition.entityKey
+    const status = identity?.status ?? (entityKey ? "resolved" : "unresolved")
+    const relationships = semanticRelationships(type, properties, contribution?.nodes ?? [], definition.entityKind, entityKey)
+    const unresolved = relationships.filter((relationship) => relationship.status !== "resolved").length + (status === "resolved" ? 0 : 1)
     const counts = capabilities.get(definition.capability) ?? { observed: 0, unresolved: 0 }
     counts.observed++
     counts.unresolved += unresolved
@@ -61,15 +63,16 @@ export const extract = (
     ;(evidence.semantics ??= []).push(semanticOccurrence({
       producer: "com.atheory-ai.wordpress-demo.conventions",
       kind: definition.occurrenceKind,
-      entityKind: definition.entityKind,
-      entityKey: definition.entityKey,
+      entityKind: entityKey ? definition.entityKind : undefined,
+      entityKey,
       label,
+      status,
       startByte: call.startByte,
       endByte: call.endByte,
       properties: scalarProperties(properties),
       relationships,
     }))
-    return definition.entityKey
+    return entityKey ?? ""
   }
 
   walk(tree, (call) => {
@@ -92,7 +95,8 @@ export const extract = (
   return { nodes: [], edges: [], evidence }
 }
 
-type AddFact = (type: string, label: string, call: SyntaxNode, properties: Record<string, unknown>) => string
+type FactIdentity = { entityKey?: string; status?: SemanticResolutionStatus }
+type AddFact = (type: string, label: string, call: SyntaxNode, properties: Record<string, unknown>, identity?: FactIdentity) => string
 
 function semanticDefinition(type: string, label: string, properties: Record<string, unknown>): { capability: string; occurrenceKind: string; entityKind: string; entityKey: string } {
   switch (type) {
@@ -107,7 +111,7 @@ function semanticDefinition(type: string, label: string, properties: Record<stri
   }
 }
 
-function semanticRelationships(type: string, properties: Record<string, unknown>, nodes: Node[]): RawSemanticRelationshipEvidence[] {
+function semanticRelationships(type: string, properties: Record<string, unknown>, nodes: Node[], entityKind: string, entityKey: string | undefined): RawSemanticRelationshipEvidence[] {
   const relationships: RawSemanticRelationshipEvidence[] = []
   const addCallable = (relation: string, expression: unknown): void => {
     const value = typeof expression === "string" ? expression : ""
@@ -121,7 +125,10 @@ function semanticRelationships(type: string, properties: Record<string, unknown>
     }
   }
   if (type === "wordpress_hook" && properties.phase === "registration") addCallable("subscribes_with", properties.callback)
-  if (type === "wordpress_hook" && properties.phase === "dispatch") relationships.push(semanticRelationship("dispatches", { entity_kind: "wordpress.hook", entity_key: String(properties.hook ?? "") }, { method: "literal-hook-name", confidence: "high" }))
+  if (type === "wordpress_hook" && properties.phase === "dispatch") {
+    if (entityKey) relationships.push(semanticRelationship("dispatches", { entity_kind: entityKind, entity_key: entityKey }, { method: "literal-hook-name", confidence: "high" }))
+    else relationships.push(unresolvedSemanticRelationship("dispatches", String(properties.hook_expression ?? properties.hook ?? ""), "dynamic"))
+  }
   if (type === "wordpress_route") {
     addCallable("handles", properties.callback)
     addCallable("authorizes_with", properties.permission_callback)
@@ -157,12 +164,15 @@ function extractFunctionCall(call: SyntaxNode, filePath: string, addFact: AddFac
   const args = namedChildren(argumentsNode)
 
   if (HOOK_APIS.has(functionName)) {
-    const hook = stringValue(args[0])
-    if (!hook) return
+    const hookLiteral = literalStringValue(args[0])
+    const hookExpression = expressionValue(args[0])
+    if (!hookExpression) return
+    const hook = hookLiteral ?? hookExpression
     const registration = functionName.startsWith("add_")
     addFact("wordpress_hook", hook, call, {
       api: functionName,
       hook,
+      hook_expression: hookExpression,
       hook_kind: functionName.endsWith("filter") ? "filter" : "action",
       phase: registration ? "registration" : "dispatch",
       // Kept for backwards compatibility with the initial demo vocabulary.
@@ -172,52 +182,63 @@ function extractFunctionCall(call: SyntaxNode, filePath: string, addFact: AddFac
       priority: registration ? expressionValue(args[2]) : undefined,
       accepted_args: registration ? expressionValue(args[3]) : undefined,
       family: hook.startsWith("woocommerce_") ? "woocommerce" : "wordpress",
-    })
+    }, hookLiteral ? { entityKey: hookLiteral, status: "resolved" } : { entityKey: undefined, status: "dynamic" })
     return
   }
 
   if (functionName === "register_rest_route") {
-    const namespace = stringValue(args[0])
-    const route = stringValue(args[1])
-    if (!namespace || !route) return
+    const namespaceLiteral = literalStringValue(args[0])
+    const routeLiteral = literalStringValue(args[1])
+    const namespaceExpression = expressionValue(args[0])
+    const routeExpression = expressionValue(args[1])
+    if (!namespaceExpression || !routeExpression) return
+    const namespace = namespaceLiteral ?? namespaceExpression
+    const route = routeLiteral ?? routeExpression
     const options = arrayEntries(args[2])
-    addFact("wordpress_route", `${namespace}${route}`, call, {
+    const routePath = namespaceLiteral && routeLiteral ? normalizeRoutePath(namespaceLiteral, routeLiteral) : `${namespaceExpression} ${routeExpression}`
+    const methods = normalizeRouteMethods(options.methods)
+    const entityKey = routePath && methods ? `${methods} ${routePath}` : undefined
+    addFact("wordpress_route", routePath, call, {
       api: functionName,
       namespace,
       route,
       route_family: namespace === "wc/store" || namespace.startsWith("wc/store/") ? "woocommerce_store_api" : "wordpress_rest",
       methods: options.methods,
+      normalized_methods: methods,
       callback: options.callback,
       callback_kind: callableKindFromText(options.callback),
       permission_callback: options.permission_callback,
       permission_callback_presence: options.permission_callback ? "observed" : "not_observed",
       args_declaration: options.args,
       options: expressionValue(args[2]),
-    })
+    }, entityKey ? { entityKey, status: "resolved" } : { entityKey: undefined, status: namespaceLiteral && routeLiteral ? "unresolved" : "dynamic" })
     return
   }
 
   if (functionName === "register_block_type") {
-    const block = expressionValue(args[0])
-    if (!block) return
+    const blockExpression = expressionValue(args[0])
+    if (!blockExpression) return
+    const blockLiteral = literalStringValue(args[0])
+    const blockName = blockLiteral && isCanonicalBlockName(blockLiteral) ? blockLiteral : undefined
     const settings = arrayEntries(args[1])
-    addFact("wordpress_block", block, call, {
+    addFact("wordpress_block", blockName ?? blockExpression, call, {
       api: functionName,
-      block,
-      registration_mode: block.includes("/") && !block.includes("block.json") ? "name_or_path_expression" : "metadata_or_path_expression",
+      block: blockExpression,
+      registration_mode: blockName ? "literal_block_name" : blockLiteral ? "literal_metadata_path" : "computed_expression",
       render_callback: settings.render_callback,
       render_callback_kind: callableKindFromText(settings.render_callback),
       editor_script: settings.editor_script,
       settings: expressionValue(args[1]),
-    })
+    }, blockName ? { entityKey: blockName, status: "resolved" } : { entityKey: undefined, status: blockLiteral ? "unresolved" : "dynamic" })
     return
   }
 
   if (functionName === "woocommerce_register_additional_checkout_field") {
     const field = arrayEntries(args[0])
-    const id = field.id ?? expressionValue(args[0])
-    if (!id) return
-    addFact("woocommerce_checkout_field", id, call, {
+    const idExpression = field.id ?? expressionValue(args[0])
+    if (!idExpression) return
+    const id = literalExpressionValue(idExpression)
+    addFact("woocommerce_checkout_field", id ?? idExpression, call, {
       api: functionName,
       id,
       label: field.label,
@@ -229,13 +250,16 @@ function extractFunctionCall(call: SyntaxNode, filePath: string, addFact: AddFac
       attributes: field.attributes,
       configuration: expressionValue(args[0]),
       observed_only: true,
-    })
+    }, id ? { entityKey: id, status: "resolved" } : { entityKey: undefined, status: "dynamic" })
     return
   }
 
   if (STORE_API_EXTENSION_APIS.has(functionName)) {
     const config = arrayEntries(args[0])
-    addFact("woocommerce_store_api_extension", functionName, call, {
+    const endpoint = literalExpressionValue(config.endpoint)
+    const namespace = literalExpressionValue(config.namespace)
+    const entityKey = endpoint && namespace ? `${functionName}:${endpoint}:${namespace}` : undefined
+    addFact("woocommerce_store_api_extension", entityKey ?? functionName, call, {
       api: functionName,
       operation: storeApiOperation(functionName),
       endpoint: config.endpoint,
@@ -245,7 +269,7 @@ function extractFunctionCall(call: SyntaxNode, filePath: string, addFact: AddFac
       update_callback: config.callback ?? config.update_callback,
       payment_requirements: config.payment_requirements,
       configuration: expressionValue(args[0]),
-    })
+    }, entityKey ? { entityKey, status: "resolved" } : { entityKey: undefined, status: "unresolved" })
     return
   }
 
@@ -295,6 +319,51 @@ function stringValue(node: SyntaxNode | undefined): string {
   if (!node) return ""
   const string = node.type === "string" ? node : firstDescendantByType(node, "string")
   return string?.text.replace(/^(?:'|")|(?:'|")$/g, "") ?? ""
+}
+
+function literalStringValue(node: SyntaxNode | undefined): string | undefined {
+  if (!node) return undefined
+  const child = node.type === "argument" ? namedChildren(node)[0] : node
+  if (child?.type !== "string") return undefined
+  return child.text.replace(/^(?:'|")|(?:'|")$/g, "")
+}
+
+function literalExpressionValue(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const match = /^(['"])([\s\S]*)\1$/.exec(value.trim())
+  return match?.[2]
+}
+
+function normalizeRoutePath(namespace: string, route: string): string {
+  const normalizedNamespace = namespace.replace(/^\/+|\/+$/g, "")
+  const normalizedRoute = "/" + route.replace(/^\/+/, "")
+  return normalizedNamespace + normalizedRoute
+}
+
+function normalizeRouteMethods(expression: string | undefined): string | undefined {
+  if (!expression) return undefined
+  const constants: Record<string, string> = {
+    "WP_REST_Server::READABLE": "GET",
+    "\\WP_REST_Server::READABLE": "GET",
+    "WP_REST_Server::CREATABLE": "POST",
+    "\\WP_REST_Server::CREATABLE": "POST",
+    "WP_REST_Server::EDITABLE": "PATCH|POST|PUT",
+    "\\WP_REST_Server::EDITABLE": "PATCH|POST|PUT",
+    "WP_REST_Server::DELETABLE": "DELETE",
+    "\\WP_REST_Server::DELETABLE": "DELETE",
+    "WP_REST_Server::ALLMETHODS": "DELETE|GET|PATCH|POST|PUT",
+    "\\WP_REST_Server::ALLMETHODS": "DELETE|GET|PATCH|POST|PUT",
+  }
+  const trimmed = expression.trim()
+  if (constants[trimmed]) return constants[trimmed]
+  const literal = literalExpressionValue(trimmed)
+  if (literal && /^[A-Za-z]+$/.test(literal)) return literal.toUpperCase()
+  const methods = [...trimmed.matchAll(/['"](GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)['"]/gi)].map((match) => match[1].toUpperCase())
+  return methods.length > 0 ? [...new Set(methods)].sort().join("|") : undefined
+}
+
+function isCanonicalBlockName(value: string): boolean {
+  return /^[a-z0-9][a-z0-9-]*\/[a-z0-9][a-z0-9-]*$/.test(value)
 }
 
 function arrayEntries(node: SyntaxNode | undefined): Record<string, string> {

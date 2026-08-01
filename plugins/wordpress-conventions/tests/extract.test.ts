@@ -30,7 +30,7 @@ describe("WordPress convention extraction", () => {
   it("models hooks, REST routes, and blocks from function-call CST nodes", () => {
     const tree = node("program", "", null, [
       call("add_action", [node("string", "'woocommerce_checkout_process'"), node("name", "validate_checkout")]),
-      call("register_rest_route", [node("string", "'store/v1'"), node("string", "'/products'")]),
+      call("register_rest_route", [node("string", "'store/v1'"), node("string", "'/products'"), array([entry("methods", node("string", "'GET'"))])]),
       call("register_block_type", [node("string", "'demo/catalog'")]),
     ])
     const evidence = extract("plugins/catalog.php", "", tree).evidence
@@ -96,6 +96,7 @@ describe("WordPress convention extraction", () => {
       permission_callback_presence: "observed",
       args_declaration: "$args",
     })
+    expect(route?.entity_key).toBe("GET demo/v1/catalog")
     expect(route?.relationships).toEqual(expect.arrayContaining([
       expect.objectContaining({ relation: "handles", status: "resolved", target: expect.objectContaining({ canonical_id: "Demo:global:function:get_catalog" }) }),
       expect.objectContaining({ relation: "authorizes_with", status: "unresolved" }),
@@ -151,7 +152,7 @@ describe("WordPress convention extraction", () => {
 
     const result = extract("plugins/catalog.php", "", tree)
     expect(result.evidence?.semantics?.find((item) => item.entity_kind === "woocommerce.checkout_field")?.properties).toMatchObject({
-      id: "'demo/gift-message'",
+      id: "demo/gift-message",
       location: "'order'",
       field_type: "'text'",
       required: "true",
@@ -162,12 +163,39 @@ describe("WordPress convention extraction", () => {
       render_callback: "'render_catalog'",
       editor_script: "'demo-catalog-editor'",
     })
-    expect(result.evidence?.semantics?.find((item) => item.entity_kind === "woocommerce.store_api_extension")?.properties).toMatchObject({
+    const storeExtension = result.evidence?.semantics?.find((item) => item.kind === "woocommerce.store_api_extension_registration")
+    expect(storeExtension?.properties).toMatchObject({
       operation: "register_endpoint_data",
       endpoint: "CartSchema::IDENTIFIER",
       namespace: "'demo'",
       data_callback: "get_cart_data",
       schema_callback: "get_cart_schema",
+    })
+    expect(storeExtension).toMatchObject({ status: "unresolved", entity_kind: undefined, entity_key: undefined })
+  })
+
+  it("retains computed framework identities as dynamic evidence instead of canonical facts", () => {
+    const tree = node("program", "", null, [
+      call("do_action", [node("binary_expression", "'prefix_' . $suffix", null, [node("string", "'prefix_'"), node("variable_name", "$suffix")])]),
+      call("register_rest_route", [node("variable_name", "$namespace"), node("variable_name", "$route"), array([entry("methods", node("variable_name", "$methods"))])]),
+      call("register_block_type", [node("variable_name", "$block_json_file")]),
+      call("woocommerce_register_additional_checkout_field", [array([entry("id", node("variable_name", "$id"))])]),
+    ])
+
+    const semantics = extract("plugins/dynamic.php", "", tree).evidence?.semantics ?? []
+    expect(semantics).toHaveLength(4)
+    for (const occurrence of semantics) {
+      expect(occurrence.entity_kind).toBeUndefined()
+      expect(occurrence.entity_key).toBeUndefined()
+      expect(["dynamic", "unresolved"]).toContain(occurrence.status)
+    }
+    expect(semantics.find((item) => item.kind === "wordpress.hook_call")).toMatchObject({
+      label: "'prefix_' . $suffix",
+      status: "dynamic",
+    })
+    expect(semantics.find((item) => item.kind === "gutenberg.block_registration")).toMatchObject({
+      label: "$block_json_file",
+      status: "dynamic",
     })
   })
 
