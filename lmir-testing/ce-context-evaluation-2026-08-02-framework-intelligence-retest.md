@@ -94,7 +94,7 @@ For the original regression, the persisted graph contains all of:
 its call graph as framework-mediated, rather than misrepresenting it as a direct
 PHP call. A canonical-ID `ce_semantic_path` returns the same path.
 
-## Repeated investigation results
+## Required findings
 
 The rubric had five required findings:
 
@@ -103,6 +103,12 @@ The rubric had five required findings:
 3. saved-cart merge condition and login marker;
 4. JWT/current-user authentication does not inherently trigger `wp_login`;
 5. a narrowly scoped Store API fix and appropriate regression-test surface.
+
+## Directed local-agent validation
+
+Before authorizing external source transmission, one repeated source-only and
+two repeated CE-assisted local-agent investigations were run. The CE agents had
+an explicit instruction to assess whether the new mediated path was discoverable.
 
 | Condition | Run | Required findings | Materially wrong claims | Result |
 | --- | ---: | ---: | ---: | --- |
@@ -125,14 +131,70 @@ Both CE runs reached the same causal explanation:
 Neither CE run repeated the earlier error of treating the legacy/core request
 session path as the current Store API Cart-Token implementation.
 
+This established that the graph could answer the question when the evaluator
+was directed to test the framework path. It did not establish that an unguided
+agent would discover that path from the original task language.
+
+## External Luna paired evaluation
+
+After explicit approval to transmit selected source context, the repository
+harness ran two independent `gpt-5.6-luna`/medium investigations per condition.
+The task, system instructions, 12-retrieval budget, source-read limit, and final
+answer requirements were identical. The only experimental variable was the
+retrieval surface.
+
+| Condition | Run | Rubric score | Material issue |
+| --- | ---: | ---: | --- |
+| Source only | 1 | 5/5 | Exact marker, callback, merge condition, handler and tests were source-backed |
+| Source only | 2 | 3.5/5 | Did not read the auth, merge, hook-registration, or named test sources; also named `load_cart_from_session` instead of `get_cart_from_session` |
+| CE assisted | 1 | 3/5 | Read authentication and token-session code, but not the merge implementation, login-hook registration, WordPress auth path, or cited tests |
+| CE assisted | 2 | 2/5 | Did not retrieve `SessionHandler`, route bootstrap, merge/persistence, login-hook sources, or tests |
+
+Scores count only facts supported by evidence actually present in each trace;
+plausible claims in final prose do not receive credit. Both Luna CE runs avoided
+the old wrong legacy-session path. However, neither found the decisive
+`wp_login` → `wc_user_logged_in` → merge-marker evidence that is present in the
+graph. CE run 1 reached a broadly correct but incomplete hypothesis. CE run 2
+made several plausible claims without retrieving the source required to support
+them.
+
+The trace explains why:
+
+- the initial broad `ce_investigate` ranked the generic Store API `Cart` class,
+  its large test class, and a cart-update hook;
+- its 8,000-character output budget was consumed before reaching the relevant
+  login/cart-merge boundary;
+- `ce_search("Cart-Token")` returned no nodes;
+- long semantic searches for cart-token/session concepts returned no match or
+  weakly related hooks;
+- the agent therefore never learned the exact `wc_user_logged_in` anchor that
+  makes the high-quality callgraph path available.
+
+By contrast, an exact `ce_investigate("wc_user_logged_in")` returns the full
+framework-mediated chain. The remaining defect is therefore discovery and
+ranking across concepts, not absence or corruption of the underlying edge.
+
+### Retrieval cost
+
+| Metric | Source-only mean | CE mean | Difference |
+| --- | ---: | ---: | ---: |
+| Tool calls | 12 | 12 | equal |
+| Narrow source reads | 7.5 | 4.5 | CE used 40% fewer |
+| Prompt tokens | 123,239 | 99,379 | CE used 19.4% fewer |
+
+CE reduced raw source loading and prompt volume, but some of that reduction was
+simply missing evidence rather than retrieval efficiency. The savings therefore
+do not compensate for the lower scores. Correctness and completeness remain the
+acceptance gate.
+
 ## What improved
 
 - **Correctness:** the hidden WordPress-to-WooCommerce callback is now a
   navigable fact, backed by exact source occurrences.
-- **Completeness:** both CE runs covered all five required causal and remediation
-  points; the prior CE runs covered the marker inconsistently.
-- **Consistency:** two of two CE runs agreed on the decisive runtime path and
-  safe change boundary.
+- **Directed completeness:** when the callback or hook is known, CE now closes
+  the framework path deterministically.
+- **Unguided consistency:** both Luna CE runs avoided a false path and agreed on
+  the safe change boundary, but both missed the exact merge-marker evidence.
 - **Uncertainty calibration:** the answers still separated the absent reporter
   JWT plugin and runtime overwrite timing from source-confirmed behavior.
 
@@ -148,24 +210,27 @@ session path as the current Store API Cart-Token implementation.
   exact symbol or hook searches.
 - Some composed investigation packets are noisy or shallow, requiring the
   agent to refine with exact anchors.
+- The major remaining effectiveness gap is concept bridging: a task expressed
+  as Cart-Token/session/login semantics does not navigate to the stored
+  `wp_login`/`wc_user_logged_in` execution path unless the agent already knows
+  the callback name.
 - Index memory remains material: allocated heap peaked at 1.75 GB and retained
   971 MB after final GC. Persisted storage is below the former multi-gigabyte
   result but is still 869 MB.
 
 ## Verdict
 
-**The framework-execution regression is closed.** The graph is correct for the
-tested hook, the decisive edge is exposed through normal CE investigation and
-callgraph tools, and two repeated CE-assisted investigations were complete,
-correct, and mutually consistent.
+**The indexing and framework-edge regression is closed.** The graph stores the
+right callback and dispatch relationships, with exact evidence and no dangling
+edges.
 
-**Task 07 now reaches parity with the strong source-only baseline.** That is a
-material improvement from the previous CE inconsistency, but it is not by
-itself evidence that CE is generally superior to source search. The strongest
-next effectiveness test is a task whose decisive framework relationship cannot
-be found by searching for a shared literal name, followed by the same repeated
-scoring.
+**The end-to-end retrieval claim is not yet closed.** In the unguided Luna
+harness, CE produced a broadly correct answer with fewer source reads and fewer
+prompt tokens, but both repetitions omitted one of the five critical evidence
+groups. The source-only condition was more complete overall.
 
-The external `gpt-5.6-luna` harness was not run because it would transmit local
-source-derived context to the OpenAI API. That run requires explicit approval
-for that payload and destination.
+The next fix should make framework semantics navigable from problem-level
+concepts: improve composed-investigation ranking and connect Store API session,
+authentication transition, persistent-cart merge, and login-side-effect facts.
+After that change, rerun the same frozen four-run harness before adding a new
+benchmark.
