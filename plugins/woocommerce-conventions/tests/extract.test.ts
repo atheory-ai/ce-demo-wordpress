@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
 import { extract } from "../src/extract.js"
+import { match } from "../src/match.js"
 
 Object.assign(globalThis, {
   __ce_node_id: (_projectID: string, type: string, canonicalID: string) => `${type}:${canonicalID}`,
@@ -15,6 +16,11 @@ function entry(key: string, value: SyntaxNode): SyntaxNode { return node("array_
 function array(items: SyntaxNode[]): SyntaxNode { return node("array_creation_expression", "", null, items) }
 
 describe("WooCommerce convention extraction", () => {
+  it("uses the same file eligibility boundary as its required PHP provider", () => {
+    expect(match("woocommerce/src/Checkout.php")).toBe(true)
+    expect(match("wordpress/src/wp-includes/build/pages.php")).toBe(false)
+    expect(match("woocommerce/vendor/example.php")).toBe(false)
+  })
   it("models Store API, checkout, scheduled actions, cart, and order lifecycle facts", () => {
     const tree = node("program", "", null, [
       call("woocommerce_register_additional_checkout_field", [array([entry("id", node("string", "'demo/gift'")), entry("sanitize_callback", node("string", "'sanitize_gift'"))])]),

@@ -1,6 +1,7 @@
 import { definePlugin } from "@atheory-ai/ce-plugin-sdk"
 import type { ExtractionResult } from "@atheory-ai/ce-plugin-sdk"
 import { extract } from "./extract.js"
+import { match } from "./match.js"
 
 const decorate = (filePath: string, content: string, tree: Parameters<typeof extract>[2], contribution: ExtractionResult, sourceAnchor?: Parameters<typeof extract>[3]) =>
   extract(filePath, content, tree, sourceAnchor, contribution)
@@ -111,7 +112,7 @@ export default definePlugin({
   language: {
     extensions: [".php", ".phtml"],
     customMatch: true,
-    match: (filePath: string) => /\.(?:php|phtml)$/i.test(filePath),
+    match,
     extract,
     decorate,
   },
