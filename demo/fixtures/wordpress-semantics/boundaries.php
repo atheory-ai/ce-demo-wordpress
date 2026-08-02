@@ -33,6 +33,19 @@ function demo_update_cart( $cart, $value ): void {
 	$cart->add_to_cart( 123, 1, 0, array(), array( 'gift_message' => $clean_value ) );
 }
 
+function demo_dispatch_catalog_refresh(): void {
+	do_action( 'demo_store_catalog_refresh' );
+}
+
+function demo_handle_catalog_refresh(): void {
+	// The fixture intentionally keeps the callback body small: the semantic
+	// contract under test is framework-mediated reachability and replacement.
+}
+
+add_action( 'demo_store_catalog_refresh', 'demo_handle_catalog_refresh', 20, 0 );
+
+as_schedule_recurring_action( time(), HOUR_IN_SECONDS, 'demo_store_catalog_refresh', array(), 'demo-store' );
+
 add_action( 'rest_api_init', 'demo_register_store_data' );
 
 register_rest_route(

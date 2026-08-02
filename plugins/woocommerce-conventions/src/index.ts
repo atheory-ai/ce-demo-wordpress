@@ -1,4 +1,9 @@
 import { definePlugin } from "@atheory-ai/ce-plugin-sdk"
+import type { ExtractionResult } from "@atheory-ai/ce-plugin-sdk"
+import { extract } from "./extract.js"
+
+const decorate = (filePath: string, content: string, tree: Parameters<typeof extract>[2], contribution: ExtractionResult, sourceAnchor?: Parameters<typeof extract>[3]) =>
+  extract(filePath, content, tree, sourceAnchor, contribution)
 
 // WooCommerce-specific semantic requirements. This manifest-only plugin never
 // parses source or mutates a plan; CE evaluates these policy records.
@@ -11,6 +16,13 @@ export default definePlugin({
       "com.atheory-ai.wordpress-demo.php",
       "com.atheory-ai.wordpress-demo.conventions",
     ],
+  },
+  index: {
+    phase: "file.decorate",
+    scope: "file",
+    requires: ["artifact:source", "artifact:cst:php", "facts:php-structure", "framework:wordpress"],
+    provides: ["framework:woocommerce"],
+    enriches: ["php"],
   },
   semanticPolicies: {
     schemaVersion: "v1",
@@ -95,5 +107,12 @@ export default definePlugin({
         },
       },
     ],
+  },
+  language: {
+    extensions: [".php", ".phtml"],
+    customMatch: true,
+    match: (filePath: string) => /\.(?:php|phtml)$/i.test(filePath),
+    extract,
+    decorate,
   },
 })

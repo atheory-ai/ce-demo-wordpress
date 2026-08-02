@@ -21,6 +21,7 @@ export default definePlugin({
     phase: "file.decorate",
     scope: "file",
     requires: ["artifact:source", "artifact:cst:php", "facts:php-structure"],
+    provides: ["framework:wordpress"],
     enriches: ["php"],
   },
   // These are implementation-packet requirements. CE only activates a policy

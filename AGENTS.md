@@ -125,11 +125,11 @@ If MCP is not available, query skills via the command line:
 
 ### Available topics
 
-  benchmark, context-acquisition, context-engine, demo-architecture, gutenberg, iir, php, plugin-authoring, semantic-verification, typescript, wasm, woocommerce, wordpress
+  benchmark, context-acquisition, context-engine, demo-architecture, framework-analysis, gutenberg, iir, php, plugin-authoring, semantic-graphs, semantic-verification, static-analysis, typescript, wasm, woocommerce, wordpress
 
 ### Available tags
 
-  blocks, coverage, evidence, guided-learning, hooks, iir, intent, policy, repair, rest-api, sandbox, sdk, source-evidence, tree-sitter, wordpress
+  blocks, callbacks, ce, completeness, coverage, cst, evidence, guided-learning, hooks, iir, intent, lifecycle, policy, repair, rest-api, sandbox, sdk, source-evidence, tree-sitter, wasm, wordpress
 
 <!-- skillex:end -->
 

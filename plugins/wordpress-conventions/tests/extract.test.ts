@@ -122,17 +122,8 @@ describe("WordPress convention extraction", () => {
     })
   })
 
-  it("models block and Store API extension boundaries as observed configuration", () => {
+  it("models server-rendered block boundaries as observed configuration", () => {
     const tree = node("program", "", null, [
-      call("woocommerce_register_additional_checkout_field", [
-        array([
-          entry("id", node("string", "'demo/gift-message'")),
-          entry("location", node("string", "'order'")),
-          entry("type", node("string", "'text'")),
-          entry("required", node("name", "true")),
-          entry("sanitize_callback", node("name", "sanitize_text_field")),
-        ]),
-      ]),
       call("register_block_type", [
         node("string", "'demo/catalog'"),
         array([
@@ -140,38 +131,13 @@ describe("WordPress convention extraction", () => {
           entry("editor_script", node("string", "'demo-catalog-editor'")),
         ]),
       ]),
-      call("woocommerce_store_api_register_endpoint_data", [
-        array([
-          entry("endpoint", node("name", "CartSchema::IDENTIFIER")),
-          entry("namespace", node("string", "'demo'")),
-          entry("data_callback", node("name", "get_cart_data")),
-          entry("schema_callback", node("name", "get_cart_schema")),
-        ]),
-      ]),
     ])
 
     const result = extract("plugins/catalog.php", "", tree)
-    expect(result.evidence?.semantics?.find((item) => item.entity_kind === "woocommerce.checkout_field")?.properties).toMatchObject({
-      id: "demo/gift-message",
-      location: "'order'",
-      field_type: "'text'",
-      required: "true",
-      sanitize_callback: "sanitize_text_field",
-      observed_only: "true",
-    })
     expect(result.evidence?.semantics?.find((item) => item.entity_kind === "gutenberg.block")?.properties).toMatchObject({
       render_callback: "'render_catalog'",
       editor_script: "'demo-catalog-editor'",
     })
-    const storeExtension = result.evidence?.semantics?.find((item) => item.kind === "woocommerce.store_api_extension_registration")
-    expect(storeExtension?.properties).toMatchObject({
-      operation: "register_endpoint_data",
-      endpoint: "CartSchema::IDENTIFIER",
-      namespace: "'demo'",
-      data_callback: "get_cart_data",
-      schema_callback: "get_cart_schema",
-    })
-    expect(storeExtension).toMatchObject({ status: "unresolved", entity_kind: undefined, entity_key: undefined })
   })
 
   it("retains computed framework identities as dynamic evidence instead of canonical facts", () => {
@@ -180,11 +146,10 @@ describe("WordPress convention extraction", () => {
       call("register_rest_route", [node("variable_name", "$namespace"), node("variable_name", "$route"), array([entry("methods", node("variable_name", "$methods"))])]),
       call("register_rest_route", [node("variable_name", "$namespace"), node("string", "'/items'"), array([entry("methods", node("string", "'GET'"))])]),
       call("register_block_type", [node("variable_name", "$block_json_file")]),
-      call("woocommerce_register_additional_checkout_field", [array([entry("id", node("variable_name", "$id"))])]),
     ])
 
     const semantics = extract("plugins/dynamic.php", "", tree).evidence?.semantics ?? []
-    expect(semantics).toHaveLength(5)
+    expect(semantics).toHaveLength(4)
     for (const occurrence of semantics) {
       expect(occurrence.entity_kind).toBeUndefined()
       expect(occurrence.entity_key).toBeUndefined()
@@ -200,23 +165,41 @@ describe("WordPress convention extraction", () => {
     })
   })
 
-  it("records security and cart APIs as observed boundaries, not correctness verdicts", () => {
+  it("records security APIs as observed boundaries, not correctness verdicts", () => {
     const tree = node("program", "", null, [
       call("current_user_can", [node("string", "'manage_woocommerce'")]),
       call("sanitize_text_field", [node("name", "$request_value")]),
-      node("member_call_expression", "", null, [
-        node("variable_name", "$cart", "object"),
-        node("name", "add_to_cart", "name"),
-        node("arguments", "", "arguments", [node("integer", "123")]),
-      ]),
     ])
 
     const result = extract("plugins/catalog.php", "", tree)
     expect(result.evidence?.semantics?.filter((item) => item.entity_kind === "wordpress.security_api").map((item) => item.properties?.category)).toEqual(expect.arrayContaining(["capability_check", "sanitize"]))
-    expect(result.evidence?.semantics?.find((item) => item.entity_kind === "woocommerce.cart_operation")?.properties).toMatchObject({
-      operation: "add_item",
-      receiver: "$cart",
-      observed_only: "true",
-    })
+  })
+
+  it("records hook lifecycle, removal, inspection, shortcode, and cron semantics", () => {
+    const tree = node("program", "", null, [
+      call("add_action", [node("string", "'init'"), node("string", "'boot'"), node("integer", "20")]),
+      call("remove_filter", [node("string", "'the_content'"), node("string", "'decorate'")]),
+      call("did_action", [node("string", "'init'")]),
+      call("add_shortcode", [node("string", "'catalog'"), node("string", "'render_catalog'")]),
+      call("wp_schedule_event", [node("integer", "100"), node("string", "'hourly'"), node("string", "'catalog_refresh'")]),
+    ])
+    const semantics = extract("plugins/runtime.php", "", tree).evidence?.semantics ?? []
+    expect(semantics.find((item) => item.properties?.api === "add_action")?.properties).toMatchObject({ lifecycle_stage: "request.init", priority: "20", accepted_args: "1" })
+    expect(semantics.find((item) => item.properties?.api === "remove_filter")?.relationships).toEqual(expect.arrayContaining([expect.objectContaining({ relation: "unsubscribes_with" })]))
+    expect(semantics.find((item) => item.properties?.api === "did_action")?.relationships).toEqual(expect.arrayContaining([expect.objectContaining({ relation: "inspects" })]))
+    expect(semantics.map((item) => item.entity_kind)).toEqual(expect.arrayContaining(["wordpress.shortcode", "wordpress.hook"]))
+  })
+
+  it("retains the CST-proven enclosing callable offset without copied PHP nodes", () => {
+    const dispatch = call("do_action", [node("string", "'demo_ready'")])
+    dispatch.startByte = 30
+    dispatch.endByte = 50
+    const callable = node("function_definition", "", null, [node("name", "dispatch_demo", "name"), dispatch])
+    callable.startByte = 10
+    callable.endByte = 70
+    const tree = node("program", "", null, [callable])
+    tree.startByte = 0
+    tree.endByte = 80
+    expect(extract("plugins/runtime.php", "", tree).evidence?.semantics?.[0].enclosing_start_byte).toBe(10)
   })
 })

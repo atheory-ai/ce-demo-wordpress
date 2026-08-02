@@ -1,12 +1,13 @@
 import { childByField, firstDescendantByType, semanticCoverage, semanticOccurrence, semanticRelationship, structuralEntity, unresolvedSemanticRelationship, walk } from "@atheory-ai/ce-plugin-sdk"
 import type { ExtractionResult, Node, RawEvidence, RawSemanticRelationshipEvidence, SemanticResolutionStatus, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
 
-const HOOK_APIS = new Set(["add_action", "add_filter", "do_action", "apply_filters"])
-const STORE_API_EXTENSION_APIS = new Set([
-  "woocommerce_store_api_register_endpoint_data",
-  "woocommerce_store_api_register_update_callback",
-  "woocommerce_store_api_register_payment_requirements",
+const HOOK_APIS = new Set([
+  "add_action", "add_filter", "remove_action", "remove_filter",
+  "do_action", "do_action_ref_array", "apply_filters", "apply_filters_ref_array",
+  "has_action", "has_filter", "did_action", "doing_action", "doing_filter",
 ])
+const SHORTCODE_APIS = new Set(["add_shortcode", "remove_shortcode", "shortcode_exists"])
+const CRON_APIS = new Set(["wp_schedule_event", "wp_schedule_single_event", "wp_schedule_single_action", "wp_unschedule_event", "wp_clear_scheduled_hook", "wp_next_scheduled"])
 const SECURITY_APIS: Record<string, string> = {
   current_user_can: "capability_check",
   user_can: "capability_check",
@@ -18,20 +19,9 @@ const SECURITY_APIS: Record<string, string> = {
   wp_send_json_success: "success_response",
   wp_die: "error_response",
 }
-const CART_MUTATIONS: Record<string, string> = {
-  add_to_cart: "add_item",
-  remove_cart_item: "remove_item",
-  set_quantity: "set_quantity",
-  empty_cart: "empty_cart",
-  set_address: "set_address",
-  set_customer: "set_customer",
-  apply_coupon: "apply_coupon",
-  remove_coupon: "remove_coupon",
-  calculate_totals: "calculate_totals",
-}
 
 /**
- * Extracts source-evidenced WordPress/WooCommerce facts. The facts intentionally
+ * Extracts source-evidenced WordPress facts. The facts intentionally
  * preserve expressions that cannot be statically resolved; they are navigation
  * evidence, not a runtime or security verdict.
  */
@@ -44,17 +34,19 @@ export const extract = (
 ): ExtractionResult => {
   const evidence: RawEvidence = {}
   const capabilities = new Map<string, { observed: number; unresolved: number }>()
-  const declaredCapabilities = ["wordpress.hooks", "wordpress.rest_routes", "gutenberg.blocks", "wordpress.security_boundaries", "woocommerce.checkout_fields", "woocommerce.store_api_extensions", "woocommerce.cart_effects"]
+  const declaredCapabilities = ["wordpress.hooks", "wordpress.rest_routes", "wordpress.shortcodes", "wordpress.cron", "gutenberg.blocks", "wordpress.security_boundaries"]
   if (!tree) {
     evidence.semantic_coverage = declaredCapabilities.map((capability) => semanticCoverage("com.atheory-ai.wordpress-demo.conventions", capability, "unavailable", { reason: "No PHP CST was available." }))
     return { nodes: [], edges: [], evidence }
   }
 
+  const callableScopes = collectCallableScopes(tree, contribution?.nodes ?? [])
   const addFact: AddFact = (type, label, call, properties, identity) => {
     const definition = semanticDefinition(type, label, properties)
     const entityKey = identity && Object.hasOwn(identity, "entityKey") ? identity.entityKey : definition.entityKey
     const status = identity?.status ?? (entityKey ? "resolved" : "unresolved")
-    const relationships = semanticRelationships(type, properties, contribution?.nodes ?? [], definition.entityKind, entityKey)
+    const owner = enclosingCallable(call, callableScopes)
+    const relationships = semanticRelationships(type, properties, contribution?.nodes ?? [], definition.entityKind, entityKey, owner?.canonicalID)
     const unresolved = relationships.filter((relationship) => relationship.status !== "resolved").length + (status === "resolved" ? 0 : 1)
     const counts = capabilities.get(definition.capability) ?? { observed: 0, unresolved: 0 }
     counts.observed++
@@ -69,8 +61,9 @@ export const extract = (
       status,
       startByte: call.startByte,
       endByte: call.endByte,
-      properties: scalarProperties(properties),
+      properties: scalarProperties({ ...properties, enclosing_callable: owner?.canonicalID }),
       relationships,
+      enclosingStartByte: owner?.startByte,
     }))
     return entityKey ?? ""
   }
@@ -80,7 +73,6 @@ export const extract = (
       extractFunctionCall(call, filePath, addFact)
       return
     }
-    if (call.type === "member_call_expression") extractCartEffect(call, addFact)
   })
 
   evidence.semantic_coverage = declaredCapabilities.map((capability) => {
@@ -101,48 +93,43 @@ type AddFact = (type: string, label: string, call: SyntaxNode, properties: Recor
 function semanticDefinition(type: string, label: string, properties: Record<string, unknown>): { capability: string; occurrenceKind: string; entityKind: string; entityKey: string } {
   switch (type) {
     case "wordpress_hook": return { capability: "wordpress.hooks", occurrenceKind: "wordpress.hook_call", entityKind: "wordpress.hook", entityKey: label }
+    case "wordpress_shortcode": return { capability: "wordpress.shortcodes", occurrenceKind: "wordpress.shortcode_registration", entityKind: "wordpress.shortcode", entityKey: label }
+    case "wordpress_cron": return { capability: "wordpress.cron", occurrenceKind: "wordpress.cron_schedule", entityKind: "wordpress.hook", entityKey: label }
     case "wordpress_route": return { capability: "wordpress.rest_routes", occurrenceKind: "wordpress.route_registration", entityKind: "http.route", entityKey: `${String(properties.methods ?? "ANY")} ${label}` }
     case "wordpress_block": return { capability: "gutenberg.blocks", occurrenceKind: "gutenberg.block_registration", entityKind: "gutenberg.block", entityKey: label }
     case "wordpress_security_boundary": return { capability: "wordpress.security_boundaries", occurrenceKind: "wordpress.security_boundary", entityKind: "wordpress.security_api", entityKey: `${String(properties.category ?? "boundary")}:${label}` }
-    case "woocommerce_checkout_field": return { capability: "woocommerce.checkout_fields", occurrenceKind: "woocommerce.checkout_field_registration", entityKind: "woocommerce.checkout_field", entityKey: label }
-    case "woocommerce_store_api_extension": return { capability: "woocommerce.store_api_extensions", occurrenceKind: "woocommerce.store_api_extension_registration", entityKind: "woocommerce.store_api_extension", entityKey: `${label}:${String(properties.endpoint ?? properties.namespace ?? "")}` }
-    case "woocommerce_cart_effect": return { capability: "woocommerce.cart_effects", occurrenceKind: "woocommerce.cart_effect", entityKind: "woocommerce.cart_operation", entityKey: label }
     default: return { capability: "wordpress.unknown", occurrenceKind: type, entityKind: type, entityKey: label }
   }
 }
 
-function semanticRelationships(type: string, properties: Record<string, unknown>, nodes: Node[], entityKind: string, entityKey: string | undefined): RawSemanticRelationshipEvidence[] {
+function semanticRelationships(type: string, properties: Record<string, unknown>, nodes: Node[], entityKind: string, entityKey: string | undefined, ownerCanonicalID?: string): RawSemanticRelationshipEvidence[] {
   const relationships: RawSemanticRelationshipEvidence[] = []
   const addCallable = (relation: string, expression: unknown): void => {
     const value = typeof expression === "string" ? expression : ""
     if (!value) return
-    const normalized = value.replace(/^(?:'|")|(?:'|")$/g, "")
-    const candidates = nodes.filter((node) => node.type === "symbol" && (node.label === normalized || node.label.endsWith(`.${normalized}`)))
+    const callable = callableTarget(value, ownerCanonicalID)
+    const candidates = nodes.filter((node) => node.type === "symbol" && callable.labels.some((label) => node.label === label || node.label.endsWith(`.${label}`)))
     if (candidates.length === 1) {
       relationships.push(semanticRelationship(relation, structuralEntity("symbol", candidates[0].canonicalID), { method: "same-file-symbol", confidence: "high" }))
     } else {
-      relationships.push(unresolvedSemanticRelationship(relation, value, candidates.length > 1 ? "ambiguous" : callableKindFromText(value) === "closure" ? "dynamic" : "unresolved", candidates.map((candidate) => candidate.canonicalID)))
+      relationships.push(unresolvedSemanticRelationship(relation, value, candidates.length > 1 ? "ambiguous" : callable.dynamic ? "dynamic" : "unresolved", candidates.map((candidate) => candidate.canonicalID)))
     }
   }
   if (type === "wordpress_hook" && properties.phase === "registration") addCallable("subscribes_with", properties.callback)
+  if (type === "wordpress_hook" && properties.phase === "removal") addCallable("unsubscribes_with", properties.callback)
   if (type === "wordpress_hook" && properties.phase === "dispatch") {
     if (entityKey) relationships.push(semanticRelationship("dispatches", { entity_kind: entityKind, entity_key: entityKey }, { method: "literal-hook-name", confidence: "high" }))
     else relationships.push(unresolvedSemanticRelationship("dispatches", String(properties.hook_expression ?? properties.hook ?? ""), "dynamic"))
   }
+  if (type === "wordpress_hook" && properties.phase === "inspection" && entityKey) relationships.push(semanticRelationship("inspects", { entity_kind: entityKind, entity_key: entityKey }, { method: "literal-hook-name", confidence: "high" }))
+  if (type === "wordpress_shortcode" && properties.phase === "registration") addCallable("subscribes_with", properties.callback)
+  if (type === "wordpress_shortcode" && properties.phase === "removal") addCallable("unsubscribes_with", properties.callback)
+  if (type === "wordpress_cron" && entityKey) relationships.push(semanticRelationship(properties.phase === "schedule" ? "schedules" : "inspects", { entity_kind: entityKind, entity_key: entityKey }, { method: "literal-hook-name", confidence: "high" }))
   if (type === "wordpress_route") {
     addCallable("handles", properties.callback)
     addCallable("authorizes_with", properties.permission_callback)
   }
   if (type === "wordpress_block") addCallable("renders_with", properties.render_callback)
-  if (type === "woocommerce_checkout_field") {
-    addCallable("sanitizes_with", properties.sanitize_callback)
-    addCallable("validates_with", properties.validate_callback)
-  }
-  if (type === "woocommerce_store_api_extension") {
-    addCallable("provides_data_with", properties.data_callback)
-    addCallable("provides_schema_with", properties.schema_callback)
-    addCallable("updates_with", properties.update_callback)
-  }
   return relationships
 }
 
@@ -169,19 +156,57 @@ function extractFunctionCall(call: SyntaxNode, filePath: string, addFact: AddFac
     if (!hookExpression) return
     const hook = hookLiteral ?? hookExpression
     const registration = functionName.startsWith("add_")
+    const removal = functionName.startsWith("remove_")
+    const dispatch = functionName.startsWith("do_") || functionName.startsWith("apply_")
+    const phase = registration ? "registration" : removal ? "removal" : dispatch ? "dispatch" : "inspection"
     addFact("wordpress_hook", hook, call, {
       api: functionName,
       hook,
       hook_expression: hookExpression,
       hook_kind: functionName.endsWith("filter") ? "filter" : "action",
-      phase: registration ? "registration" : "dispatch",
+      phase,
       // Kept for backwards compatibility with the initial demo vocabulary.
-      direction: registration ? "registration" : "dispatch",
-      callback: registration ? expressionValue(args[1]) : undefined,
-      callback_kind: registration ? callableKind(args[1]) : undefined,
-      priority: registration ? expressionValue(args[2]) : undefined,
-      accepted_args: registration ? expressionValue(args[3]) : undefined,
+      direction: phase,
+      callback: registration || removal ? expressionValue(args[1]) : undefined,
+      callback_kind: registration || removal ? callableKind(args[1]) : undefined,
+      priority: registration || removal ? expressionValue(args[2]) ?? "10" : undefined,
+      accepted_args: registration ? expressionValue(args[3]) ?? "1" : undefined,
+      lifecycle_stage: hookLifecycle(hookLiteral),
+      dynamic_pattern: hookLiteral ? undefined : hookPattern(hookExpression),
       family: hook.startsWith("woocommerce_") ? "woocommerce" : "wordpress",
+    }, hookLiteral ? { entityKey: hookLiteral, status: "resolved" } : { entityKey: undefined, status: "dynamic" })
+    return
+  }
+
+  if (SHORTCODE_APIS.has(functionName)) {
+    const tagLiteral = literalStringValue(args[0])
+    const tagExpression = expressionValue(args[0])
+    if (!tagExpression) return
+    const phase = functionName === "add_shortcode" ? "registration" : functionName === "remove_shortcode" ? "removal" : "inspection"
+    addFact("wordpress_shortcode", tagLiteral ?? tagExpression, call, {
+      api: functionName,
+      phase,
+      shortcode: tagExpression,
+      callback: phase === "registration" || phase === "removal" ? expressionValue(args[1]) : undefined,
+      callback_kind: phase === "registration" || phase === "removal" ? callableKind(args[1]) : undefined,
+    }, tagLiteral ? { entityKey: tagLiteral, status: "resolved" } : { entityKey: undefined, status: "dynamic" })
+    return
+  }
+
+  if (CRON_APIS.has(functionName)) {
+    const hookIndex = functionName === "wp_schedule_event" ? 2 : functionName === "wp_schedule_single_event" || functionName === "wp_schedule_single_action" ? 1 : functionName === "wp_unschedule_event" ? 1 : 0
+    const hookLiteral = literalStringValue(args[hookIndex])
+    const hookExpression = expressionValue(args[hookIndex])
+    if (!hookExpression) return
+    const schedule = functionName.startsWith("wp_schedule")
+    addFact("wordpress_cron", hookLiteral ?? hookExpression, call, {
+      api: functionName,
+      phase: schedule ? "schedule" : functionName === "wp_next_scheduled" ? "inspection" : "removal",
+      hook: hookExpression,
+      timestamp: schedule ? expressionValue(args[0]) : undefined,
+      recurrence: functionName === "wp_schedule_event" ? expressionValue(args[1]) : undefined,
+      arguments: expressionValue(args[hookIndex + 1]),
+      dynamic_pattern: hookLiteral ? undefined : hookPattern(hookExpression),
     }, hookLiteral ? { entityKey: hookLiteral, status: "resolved" } : { entityKey: undefined, status: "dynamic" })
     return
   }
@@ -233,45 +258,6 @@ function extractFunctionCall(call: SyntaxNode, filePath: string, addFact: AddFac
     return
   }
 
-  if (functionName === "woocommerce_register_additional_checkout_field") {
-    const field = arrayEntries(args[0])
-    const idExpression = field.id ?? expressionValue(args[0])
-    if (!idExpression) return
-    const id = literalExpressionValue(idExpression)
-    addFact("woocommerce_checkout_field", id ?? idExpression, call, {
-      api: functionName,
-      id,
-      label: field.label,
-      location: field.location,
-      field_type: field.type ?? "text_default",
-      required: field.required,
-      sanitize_callback: field.sanitize_callback,
-      validate_callback: field.validate_callback,
-      attributes: field.attributes,
-      configuration: expressionValue(args[0]),
-      observed_only: true,
-    }, id ? { entityKey: id, status: "resolved" } : { entityKey: undefined, status: "dynamic" })
-    return
-  }
-
-  if (STORE_API_EXTENSION_APIS.has(functionName)) {
-    const config = arrayEntries(args[0])
-    const endpoint = literalExpressionValue(config.endpoint)
-    const namespace = literalExpressionValue(config.namespace)
-    const entityKey = endpoint && namespace ? `${functionName}:${endpoint}:${namespace}` : undefined
-    addFact("woocommerce_store_api_extension", entityKey ?? functionName, call, {
-      api: functionName,
-      operation: storeApiOperation(functionName),
-      endpoint: config.endpoint,
-      namespace: config.namespace,
-      data_callback: config.data_callback,
-      schema_callback: config.schema_callback,
-      update_callback: config.callback ?? config.update_callback,
-      payment_requirements: config.payment_requirements,
-      configuration: expressionValue(args[0]),
-    }, entityKey ? { entityKey, status: "resolved" } : { entityKey: undefined, status: "unresolved" })
-    return
-  }
 
   const securityCategory = securityCategoryFor(functionName)
   if (securityCategory) {
@@ -285,21 +271,6 @@ function extractFunctionCall(call: SyntaxNode, filePath: string, addFact: AddFac
   }
 }
 
-function extractCartEffect(call: SyntaxNode, addFact: AddFact): void {
-  const name = childByField(call, "name") ?? namedChildren(call).find((child) => child.type === "name")
-  const method = normalizeCallName(name?.text ?? "")
-  const operation = CART_MUTATIONS[method]
-  if (!operation) return
-  const receiver = childByField(call, "object") ?? namedChildren(call)[0]
-  const argumentsNode = childByField(call, "arguments") ?? namedChildren(call).find((child) => child.type === "arguments")
-  addFact("woocommerce_cart_effect", operation, call, {
-    api: method,
-    operation,
-    receiver: expressionValue(receiver),
-    arguments: expressionValue(argumentsNode),
-    observed_only: true,
-  })
-}
 
 function normalizeCallName(name: string): string {
   return name.replace(/^\\+/, "").toLowerCase()
@@ -396,15 +367,61 @@ function callableKindFromText(value: string | undefined): string | undefined {
   return "function_name_or_expression"
 }
 
+type CallableScope = { startByte: number; endByte: number; canonicalID: string }
+
+function collectCallableScopes(tree: SyntaxNode, nodes: Node[]): CallableScope[] {
+  const scopes: CallableScope[] = []
+  walk(tree, (candidate) => {
+    if (candidate.type !== "function_definition" && candidate.type !== "method_declaration") return
+    const structural = nodes.find((node) => node.type === "symbol" && Number(node.properties?.start_byte) === candidate.startByte)
+    scopes.push({ startByte: candidate.startByte, endByte: candidate.endByte, canonicalID: structural?.canonicalID ?? "" })
+  })
+  return scopes.sort((left, right) => (left.endByte - left.startByte) - (right.endByte - right.startByte))
+}
+
+function enclosingCallable(node: SyntaxNode, scopes: CallableScope[]): CallableScope | undefined {
+  return scopes.find((scope) => scope.startByte <= node.startByte && scope.endByte >= node.endByte)
+}
+
+function callableTarget(value: string, ownerCanonicalID?: string): { labels: string[]; dynamic: boolean } {
+  const text = value.trim()
+  if (callableKindFromText(text) === "closure") return { labels: [], dynamic: true }
+  const plain = /^(?:['"])([A-Za-z_\\][A-Za-z0-9_\\]*(?:::[A-Za-z_][A-Za-z0-9_]*)?)(?:['"])$/.exec(text)?.[1]
+  if (plain) return { labels: [plain.replace("::", "."), plain.split("\\").at(-1)!.replace("::", ".")], dynamic: false }
+  const arrayMethod = /(?:\[|array\s*\()\s*([^,]+),\s*['"]([A-Za-z_][A-Za-z0-9_]*)['"]/.exec(text)
+  if (arrayMethod) {
+    const receiver = arrayMethod[1].trim().replace(/::class$/i, "").replace(/^(?:['"]|\\)+|['"]$/g, "")
+    const method = arrayMethod[2]
+    if (receiver === "$this" && ownerCanonicalID) {
+      const ownerLabel = ownerCanonicalID.split(":").at(-1)?.split(".")[0]
+      return { labels: ownerLabel ? [`${ownerLabel}.${method}`] : [method], dynamic: false }
+    }
+    if (/^[A-Za-z_\\][A-Za-z0-9_\\]*$/.test(receiver)) return { labels: [`${receiver.split("\\").at(-1)}.${method}`], dynamic: false }
+    return { labels: [method], dynamic: true }
+  }
+  return { labels: [], dynamic: text.startsWith("$") || text.includes("->") }
+}
+
+function hookPattern(expression: string): string {
+  return expression.replace(/\$\{[^}]+\}|\{\$[^}]+\}|\$[A-Za-z_][A-Za-z0-9_]*/g, "{dynamic}")
+}
+
+function hookLifecycle(hook: string | undefined): string | undefined {
+  if (!hook) return undefined
+  const stages: Record<string, string> = {
+    muplugins_loaded: "bootstrap.mu_plugins", plugins_loaded: "bootstrap.plugins", setup_theme: "bootstrap.theme_setup",
+    after_setup_theme: "bootstrap.after_theme_setup", init: "request.init", wp_loaded: "request.loaded",
+    parse_request: "request.parse", send_headers: "request.headers", parse_query: "query.parse",
+    pre_get_posts: "query.prepare", wp: "request.resolve", template_redirect: "response.template_redirect",
+    wp_head: "render.head", wp_footer: "render.footer", shutdown: "shutdown",
+    admin_init: "admin.init", rest_api_init: "rest.init",
+  }
+  return stages[hook]
+}
+
 function securityCategoryFor(functionName: string): string | undefined {
   if (SECURITY_APIS[functionName]) return SECURITY_APIS[functionName]
   if (functionName.startsWith("sanitize_")) return "sanitize"
   if (functionName.startsWith("esc_") || functionName.startsWith("wp_kses")) return "escape"
   return undefined
-}
-
-function storeApiOperation(api: string): string {
-  if (api.endsWith("register_endpoint_data")) return "register_endpoint_data"
-  if (api.endsWith("register_update_callback")) return "register_update_callback"
-  return "register_payment_requirements"
 }

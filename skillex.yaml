@@ -13,4 +13,5 @@ Rules:
   - Scope: 'plugins/**'
     Skills:
       - skills/wordpress-plugin-authoring.md
+      - skills/building-framework-intelligence.md
     DependencyBoundary: ''
