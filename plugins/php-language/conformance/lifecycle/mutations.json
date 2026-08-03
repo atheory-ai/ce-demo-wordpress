@@ -1,5 +1,6 @@
 {
   "schema_version": "ce-conformance-mutations/v1",
+  "worker_counts": [1, 2, 4, 8],
   "cases": [
     {
       "id": "move-call-offset",
