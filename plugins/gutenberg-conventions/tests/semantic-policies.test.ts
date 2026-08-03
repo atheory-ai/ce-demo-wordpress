@@ -3,6 +3,11 @@ import plugin from "../src/index.js"
 
 describe("Gutenberg semantic policies", () => {
   it("keeps block metadata and editor accessibility requirements narrowly scoped", () => {
+    expect(plugin.claims).toEqual([{
+      capability: "ce.policy.engineering.gutenberg/1",
+      evidence_schema: "semantic-policy-pack/v1",
+      coverage_profile: "gutenberg-policy/v1",
+    }])
     const policies = plugin.semanticPolicies?.policies ?? []
     expect(policies.find((policy) => policy.id === "gutenberg-demo.block.metadata-registration")?.when?.allClaimKinds).toEqual([
       "context.gutenberg.block",

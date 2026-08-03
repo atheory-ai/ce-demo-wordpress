@@ -6,6 +6,9 @@ export default definePlugin({
   id: "com.atheory-ai.wordpress-demo.gutenberg-conventions",
   name: "Gutenberg Conventions (Demo)",
   version: "0.6.0",
+  claims: [
+    { capability: "ce.policy.engineering.gutenberg/1", evidence_schema: "semantic-policy-pack/v1", coverage_profile: "gutenberg-policy/v1" },
+  ],
   dependencies: {
     plugins: ["com.atheory-ai.typescript"],
   },

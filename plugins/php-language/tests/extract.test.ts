@@ -33,10 +33,17 @@ describe("PHP structural extraction", () => {
     expect(result.evidence?.references?.find((item) => item.raw_specifier === "Vendor\\Package")?.space).toBe("namespace")
     expect(result.nodes.find((item) => item.label === "Catalog")?.properties.extends).toBe("BaseCatalog")
     expect(result.evidence?.semantics?.[0]).toMatchObject({
+      producer_version: "0.6.0",
+      capability: "ce.language.declarations.php/1",
+      evidence_schema: "graph-structure/v1",
+      origin: "observed",
       kind: "language.class_heritage",
       entity_kind: "php.class",
       entity_key: "src/catalog.php:Catalog",
       relationships: [{ relation: "extends", status: "unresolved", expression: "BaseCatalog" }],
+    })
+    expect(result.evidence?.semantic_coverage?.find((item) => item.capability === "ce.language.declarations.php/1")).toMatchObject({
+      coverage_profile: "php-declarations/v1", inspected: true, status: "complete",
     })
   })
 

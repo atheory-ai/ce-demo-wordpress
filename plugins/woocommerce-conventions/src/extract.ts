@@ -2,6 +2,7 @@ import { childByField, firstDescendantByType, semanticCoverage, semanticOccurren
 import type { ExtractionResult, Node, RawEvidence, RawSemanticRelationshipEvidence, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
 
 const PRODUCER = "com.atheory-ai.wordpress-demo.woocommerce-conventions"
+const PRODUCER_VERSION = "0.6.0"
 const STORE_API_APIS = new Set([
   "woocommerce_store_api_register_endpoint_data",
   "woocommerce_store_api_register_update_callback",
@@ -11,6 +12,29 @@ const ACTION_SCHEDULER_APIS = new Set(["as_schedule_single_action", "as_schedule
 const CART_EFFECTS = new Set(["add_to_cart", "remove_cart_item", "set_quantity", "empty_cart", "apply_coupon", "remove_coupon", "calculate_totals"])
 const ORDER_EFFECTS = new Set(["save", "delete", "update_status", "set_status", "payment_complete", "add_order_note", "refund"])
 const CAPABILITIES = ["woocommerce.hooks", "woocommerce.checkout_fields", "woocommerce.store_api_extensions", "woocommerce.scheduled_actions", "woocommerce.cart_effects", "woocommerce.order_lifecycle", "woocommerce.persistence_boundaries"]
+const STATE_CAPABILITIES = new Set(["woocommerce.cart_effects", "woocommerce.order_lifecycle", "woocommerce.persistence_boundaries"])
+
+const profiledCoverage = (capability: string, profile: string, observed: number, unresolved: number) =>
+  semanticCoverage(PRODUCER, capability, observed === 0 ? "not_applicable" : unresolved === 0 ? "complete" : "partial", {
+    producerVersion: PRODUCER_VERSION,
+    evidenceSchema: "semantic-occurrences/v1",
+    coverageProfile: profile,
+    inspected: true,
+    observed,
+    emitted: observed,
+    unresolved,
+    reasonCode: observed === 0 ? "no_profiled_construct" : unresolved > 0 ? "partial_resolution" : undefined,
+  })
+
+const unavailableProfiledCoverage = (capability: string, profile: string) =>
+  semanticCoverage(PRODUCER, capability, "unavailable", {
+    producerVersion: PRODUCER_VERSION,
+    evidenceSchema: "semantic-occurrences/v1",
+    coverageProfile: profile,
+    inspected: false,
+    reasonCode: "missing_input",
+    reason: "No PHP CST was available.",
+  })
 
 export const extract = (
   _filePath: string,
@@ -22,7 +46,11 @@ export const extract = (
   const evidence: RawEvidence = {}
   const counts = new Map<string, { observed: number; unresolved: number }>()
   if (!tree) {
-    evidence.semantic_coverage = CAPABILITIES.map((capability) => semanticCoverage(PRODUCER, capability, "unavailable", { reason: "No PHP CST was available." }))
+    evidence.semantic_coverage = [
+      ...CAPABILITIES.map((capability) => semanticCoverage(PRODUCER, capability, "unavailable", { reason: "No PHP CST was available." })),
+      unavailableProfiledCoverage("ce.framework.lifecycle.woocommerce/1", "woocommerce-lifecycle/v1"),
+      unavailableProfiledCoverage("ce.framework.state.woocommerce/1", "woocommerce-state/v1"),
+    ]
     return { nodes: [], edges: [], evidence }
   }
   const nodes = contribution?.nodes ?? []
@@ -36,6 +64,9 @@ export const extract = (
     counts.set(capability, current)
     ;(evidence.semantics ??= []).push(semanticOccurrence({
       producer: PRODUCER,
+      producerVersion: PRODUCER_VERSION,
+      capability: STATE_CAPABILITIES.has(capability) ? "ce.framework.state.woocommerce/1" : "ce.framework.lifecycle.woocommerce/1",
+      evidenceSchema: "semantic-occurrences/v1",
       kind,
       entityKind: entityKey ? entityKind : undefined,
       entityKey,
@@ -62,6 +93,9 @@ export const extract = (
     counts.set("woocommerce.persistence_boundaries", current)
     ;(evidence.semantics ??= []).push(semanticOccurrence({
       producer: PRODUCER,
+      producerVersion: PRODUCER_VERSION,
+      capability: "ce.framework.state.woocommerce/1",
+      evidenceSchema: "semantic-occurrences/v1",
       kind: `woocommerce.state_${operation}`,
       entityKind: occurrence.entity_kind,
       entityKey: occurrence.entity_key,
@@ -79,12 +113,21 @@ export const extract = (
       relationships: [semanticRelationship("classifies_state", { entity_kind: occurrence.entity_kind, entity_key: occurrence.entity_key }, { method: "woocommerce-owned-state-key", confidence: "high" })],
     }))
   }
-  evidence.semantic_coverage = CAPABILITIES.map((capability) => {
+  const legacyCoverage = CAPABILITIES.map((capability) => {
     const current = counts.get(capability) ?? { observed: 0, unresolved: 0 }
     return semanticCoverage(PRODUCER, capability, current.observed === 0 ? "not_applicable" : current.unresolved === 0 ? "complete" : "partial", {
       observed: current.observed, emitted: current.observed, unresolved: current.unresolved,
     })
   })
+  const aggregate = (state: boolean) => [...counts.entries()]
+    .filter(([capability]) => STATE_CAPABILITIES.has(capability) === state)
+    .reduce((total, [, value]) => ({ observed: total.observed + value.observed, unresolved: total.unresolved + value.unresolved }), { observed: 0, unresolved: 0 })
+  const lifecycleCounts = aggregate(false)
+  const stateCounts = aggregate(true)
+  evidence.semantic_coverage = legacyCoverage.concat([
+    profiledCoverage("ce.framework.lifecycle.woocommerce/1", "woocommerce-lifecycle/v1", lifecycleCounts.observed, lifecycleCounts.unresolved),
+    profiledCoverage("ce.framework.state.woocommerce/1", "woocommerce-state/v1", stateCounts.observed, stateCounts.unresolved),
+  ])
   return { nodes: [], edges: [], evidence }
 }
 

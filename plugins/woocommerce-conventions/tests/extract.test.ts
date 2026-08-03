@@ -35,6 +35,10 @@ describe("WooCommerce convention extraction", () => {
     ]))
     expect(semantics.find((item) => item.kind === "woocommerce.scheduled_action")?.relationships).toEqual(expect.arrayContaining([expect.objectContaining({ relation: "schedules" })]))
     expect(semantics.find((item) => item.entity_key === "payment_complete")?.properties).toMatchObject({ lifecycle_stage: "order.payment_complete" })
+    expect(semantics.every((item) => item.capability?.startsWith("ce.framework."))).toBe(true)
+    expect(extract("plugins/commerce.php", "", tree).evidence?.semantic_coverage?.find((item) => item.capability === "ce.framework.state.woocommerce/1")).toMatchObject({
+      coverage_profile: "woocommerce-state/v1", inspected: true, status: "complete",
+    })
   })
 
   it("specializes WooCommerce hooks and preserves callback resolution outcomes", () => {

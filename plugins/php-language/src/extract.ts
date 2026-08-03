@@ -18,6 +18,34 @@ import {
 } from "@atheory-ai/ce-plugin-sdk"
 import type { Edge, ExtractionResult, LanguageDefinition, Node, RawControlEvidence, RawEvidence, RawValueEvidence, RawValueFlowEvidence, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
 
+const PRODUCER = "com.atheory-ai.wordpress-demo.php"
+const PRODUCER_VERSION = "0.6.0"
+
+const profiledCoverage = (
+  capability: string,
+  evidenceSchema: string,
+  coverageProfile: string,
+  observed: number,
+) => semanticCoverage(PRODUCER, capability, observed === 0 ? "not_applicable" : "complete", {
+  producerVersion: PRODUCER_VERSION,
+  evidenceSchema,
+  coverageProfile,
+  inspected: true,
+  observed,
+  emitted: observed,
+  reasonCode: observed === 0 ? "no_profiled_construct" : undefined,
+})
+
+const unavailableProfiledCoverage = (capability: string, evidenceSchema: string, coverageProfile: string) =>
+  semanticCoverage(PRODUCER, capability, "unavailable", {
+    producerVersion: PRODUCER_VERSION,
+    evidenceSchema,
+    coverageProfile,
+    inspected: false,
+    reasonCode: "missing_input",
+    reason: "No PHP CST was available.",
+  })
+
 export const extract: LanguageDefinition["extract"] = (filePath, content, tree): ExtractionResult => {
   const nodes: Node[] = []
   const edges: Edge[] = []
@@ -32,7 +60,13 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
     properties: { extension: filePath.slice(filePath.lastIndexOf(".")), line_count: content.split("\n").length },
   })
   if (!tree) {
-    evidence.semantic_coverage = [semanticCoverage("com.atheory-ai.wordpress-demo.php", "language.class_heritage", "unavailable", { reason: "No PHP CST was available." })]
+    evidence.semantic_coverage = [
+      semanticCoverage(PRODUCER, "language.class_heritage", "unavailable", { reason: "No PHP CST was available." }),
+      unavailableProfiledCoverage("ce.language.declarations.php/1", "graph-structure/v1", "php-declarations/v1"),
+      unavailableProfiledCoverage("ce.language.references.php/1", "source-references/v1", "php-references/v1"),
+      unavailableProfiledCoverage("ce.language.calls.php/1", "source-calls/v1", "php-calls-static/v1"),
+      unavailableProfiledCoverage("ce.language.mechanics.php/1", "source-mechanics/v1", "php-mechanics/v1"),
+    ]
     return { nodes, edges, evidence }
   }
   const namespaceDeclarations = collectNamespaceDeclarations(content)
@@ -166,7 +200,10 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
             : unresolvedSemanticRelationship("extends", parent, "unresolved", [parent])
           if (!qualifiedParent) heritageUnresolved++
           ;(evidence.semantics ??= []).push(semanticOccurrence({
-            producer: "com.atheory-ai.wordpress-demo.php",
+            producer: PRODUCER,
+            producerVersion: PRODUCER_VERSION,
+            capability: "ce.language.declarations.php/1",
+            evidenceSchema: "graph-structure/v1",
             kind: "language.class_heritage",
             entityKind: "php.class",
             entityKey: phpQualifiedTypeName(declarationNamespace, name) ?? `${filePath}:${name}`,
@@ -228,6 +265,10 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
   }
 
   visit(tree)
+  const declarations = nodes.filter((node) => node.type === "symbol" || node.type === "namespace").length
+  const references = evidence.references?.length ?? 0
+  const calls = evidence.calls?.length ?? 0
+  const mechanics = calls + (evidence.value_flows?.length ?? 0) + (evidence.controls?.length ?? 0)
   evidence.semantic_coverage = [
     semanticCoverage(
       "com.atheory-ai.wordpress-demo.php",
@@ -238,6 +279,10 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
     semanticCoverage("com.atheory-ai.wordpress-demo.php", "language.call_arguments", (evidence.calls?.length ?? 0) === 0 ? "not_applicable" : "complete", { observed: evidence.calls?.length ?? 0, emitted: evidence.calls?.length ?? 0 }),
     semanticCoverage("com.atheory-ai.wordpress-demo.php", "language.value_flow", (evidence.value_flows?.length ?? 0) === 0 ? "not_applicable" : "complete", { observed: evidence.value_flows?.length ?? 0, emitted: evidence.value_flows?.length ?? 0 }),
     semanticCoverage("com.atheory-ai.wordpress-demo.php", "language.control_flow", (evidence.controls?.length ?? 0) === 0 ? "not_applicable" : "complete", { observed: evidence.controls?.length ?? 0, emitted: evidence.controls?.length ?? 0 }),
+    profiledCoverage("ce.language.declarations.php/1", "graph-structure/v1", "php-declarations/v1", declarations),
+    profiledCoverage("ce.language.references.php/1", "source-references/v1", "php-references/v1", references),
+    profiledCoverage("ce.language.calls.php/1", "source-calls/v1", "php-calls-static/v1", calls),
+    profiledCoverage("ce.language.mechanics.php/1", "source-mechanics/v1", "php-mechanics/v1", mechanics),
   ]
   return { ...deduplicate(nodes, edges), evidence }
 }

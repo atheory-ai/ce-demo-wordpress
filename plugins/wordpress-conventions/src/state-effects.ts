@@ -16,6 +16,7 @@ import type {
 } from "@atheory-ai/ce-plugin-sdk"
 
 const PRODUCER = "com.atheory-ai.wordpress-demo.conventions"
+const PRODUCER_VERSION = "0.6.0"
 
 type StateOperation = "read" | "write" | "delete"
 type StateAPIContract = {
@@ -105,6 +106,9 @@ export function extractWordPressStateEffects(contribution: ExtractionResult | un
     const value = definition.valueArg === undefined ? undefined : call.arguments?.[definition.valueArg]
     semantics.push(semanticOccurrence({
       producer: PRODUCER,
+      producerVersion: PRODUCER_VERSION,
+      capability: "ce.framework.state.wordpress/1",
+      evidenceSchema: "semantic-occurrences/v1",
       kind: `wordpress.state_${definition.operation}`,
       label: `${definition.operation} ${entityKey ?? keyExpression}`,
       entityKind: entityKey ? entityKind : undefined,

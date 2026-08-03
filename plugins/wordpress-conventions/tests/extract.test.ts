@@ -57,6 +57,10 @@ describe("WordPress convention extraction", () => {
     })
     expect(effects.find((item) => item.kind === "wordpress.state_delete")?.properties?.control_ids).toBe("merge-branch")
     expect(result.evidence?.semantic_coverage?.find((item) => item.capability === "wordpress.state.user_meta")).toMatchObject({ status: "complete", observed: 3, emitted: 3 })
+    expect(result.evidence?.semantic_coverage?.find((item) => item.capability === "ce.framework.state.wordpress/1")).toMatchObject({
+      coverage_profile: "wordpress-state/v1", inspected: true, status: "complete", observed: 3,
+    })
+    expect(effects[0]).toMatchObject({ capability: "ce.framework.state.wordpress/1", producer_version: "0.6.0", origin: "observed" })
   })
 
   it("retains computed persistence keys and reports partial state coverage", () => {

@@ -2,6 +2,31 @@ import { childByField, firstDescendantByType, semanticCoverage, semanticOccurren
 import type { ExtractionResult, Node, RawEvidence, RawSemanticRelationshipEvidence, SemanticResolutionStatus, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
 import { extractWordPressStateEffects, WORDPRESS_STATE_CAPABILITIES } from "./state-effects.js"
 
+const PRODUCER = "com.atheory-ai.wordpress-demo.conventions"
+const PRODUCER_VERSION = "0.6.0"
+
+const profiledCoverage = (capability: string, profile: string, observed: number, unresolved: number) =>
+  semanticCoverage(PRODUCER, capability, observed === 0 ? "not_applicable" : unresolved === 0 ? "complete" : "partial", {
+    producerVersion: PRODUCER_VERSION,
+    evidenceSchema: "semantic-occurrences/v1",
+    coverageProfile: profile,
+    inspected: true,
+    observed,
+    emitted: observed,
+    unresolved,
+    reasonCode: observed === 0 ? "no_profiled_construct" : unresolved > 0 ? "partial_resolution" : undefined,
+  })
+
+const unavailableProfiledCoverage = (capability: string, profile: string) =>
+  semanticCoverage(PRODUCER, capability, "unavailable", {
+    producerVersion: PRODUCER_VERSION,
+    evidenceSchema: "semantic-occurrences/v1",
+    coverageProfile: profile,
+    inspected: false,
+    reasonCode: "missing_input",
+    reason: "No PHP CST was available.",
+  })
+
 const HOOK_APIS = new Set([
   "add_action", "add_filter", "remove_action", "remove_filter",
   "do_action", "do_action_ref_array", "apply_filters", "apply_filters_ref_array",
@@ -37,7 +62,11 @@ export const extract = (
   const capabilities = new Map<string, { observed: number; unresolved: number }>()
   const declaredCapabilities = ["wordpress.hooks", "wordpress.rest_routes", "wordpress.shortcodes", "wordpress.cron", "gutenberg.blocks", "wordpress.security_boundaries"]
   if (!tree) {
-    evidence.semantic_coverage = [...declaredCapabilities, ...WORDPRESS_STATE_CAPABILITIES].map((capability) => semanticCoverage("com.atheory-ai.wordpress-demo.conventions", capability, "unavailable", { reason: "No PHP CST was available." }))
+    evidence.semantic_coverage = [
+      ...[...declaredCapabilities, ...WORDPRESS_STATE_CAPABILITIES].map((capability) => semanticCoverage(PRODUCER, capability, "unavailable", { reason: "No PHP CST was available." })),
+      unavailableProfiledCoverage("ce.framework.lifecycle.wordpress/1", "wordpress-lifecycle/v1"),
+      unavailableProfiledCoverage("ce.framework.state.wordpress/1", "wordpress-state/v1"),
+    ]
     return { nodes: [], edges: [], evidence }
   }
 
@@ -54,7 +83,10 @@ export const extract = (
     counts.unresolved += unresolved
     capabilities.set(definition.capability, counts)
     ;(evidence.semantics ??= []).push(semanticOccurrence({
-      producer: "com.atheory-ai.wordpress-demo.conventions",
+      producer: PRODUCER,
+      producerVersion: PRODUCER_VERSION,
+      capability: "ce.framework.lifecycle.wordpress/1",
+      evidenceSchema: "semantic-occurrences/v1",
       kind: definition.occurrenceKind,
       entityKind: entityKey ? definition.entityKind : undefined,
       entityKey,
@@ -79,15 +111,27 @@ export const extract = (
   const stateEffects = extractWordPressStateEffects(contribution)
   ;(evidence.semantics ??= []).push(...stateEffects.semantics)
 
-  evidence.semantic_coverage = declaredCapabilities.map((capability) => {
+  const legacyLifecycleCoverage = declaredCapabilities.map((capability) => {
     const counts = capabilities.get(capability) ?? { observed: 0, unresolved: 0 }
     return semanticCoverage(
-      "com.atheory-ai.wordpress-demo.conventions",
+      PRODUCER,
       capability,
       counts.observed === 0 ? "not_applicable" : counts.unresolved === 0 ? "complete" : "partial",
       { observed: counts.observed, emitted: counts.observed, unresolved: counts.unresolved },
     )
-  }).concat(stateEffects.coverage)
+  })
+  const lifecycleCounts = [...capabilities.values()].reduce((total, counts) => ({
+    observed: total.observed + counts.observed,
+    unresolved: total.unresolved + counts.unresolved,
+  }), { observed: 0, unresolved: 0 })
+  const stateCounts = stateEffects.coverage.reduce((total, coverage) => ({
+    observed: total.observed + (coverage.observed ?? 0),
+    unresolved: total.unresolved + (coverage.unresolved ?? 0),
+  }), { observed: 0, unresolved: 0 })
+  evidence.semantic_coverage = legacyLifecycleCoverage.concat(stateEffects.coverage, [
+    profiledCoverage("ce.framework.lifecycle.wordpress/1", "wordpress-lifecycle/v1", lifecycleCounts.observed, lifecycleCounts.unresolved),
+    profiledCoverage("ce.framework.state.wordpress/1", "wordpress-state/v1", stateCounts.observed, stateCounts.unresolved),
+  ])
   return { nodes: [], edges: [], evidence }
 }
 

@@ -12,6 +12,10 @@ export default definePlugin({
   id: "com.atheory-ai.wordpress-demo.woocommerce-conventions",
   name: "WooCommerce Conventions (Demo)",
   version: "0.6.0",
+  claims: [
+    { capability: "ce.framework.lifecycle.woocommerce/1", evidence_schema: "semantic-occurrences/v1", coverage_profile: "woocommerce-lifecycle/v1" },
+    { capability: "ce.framework.state.woocommerce/1", evidence_schema: "semantic-occurrences/v1", coverage_profile: "woocommerce-state/v1" },
+  ],
   dependencies: {
     plugins: [
       "com.atheory-ai.wordpress-demo.php",

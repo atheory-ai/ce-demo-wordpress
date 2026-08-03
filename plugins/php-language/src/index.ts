@@ -6,6 +6,12 @@ export default definePlugin({
   id: "com.atheory-ai.wordpress-demo.php",
   name: "PHP Language (WordPress Demo)",
   version: "0.6.0",
+  claims: [
+    { capability: "ce.language.declarations.php/1", evidence_schema: "graph-structure/v1", coverage_profile: "php-declarations/v1" },
+    { capability: "ce.language.references.php/1", evidence_schema: "source-references/v1", coverage_profile: "php-references/v1" },
+    { capability: "ce.language.calls.php/1", evidence_schema: "source-calls/v1", coverage_profile: "php-calls-static/v1" },
+    { capability: "ce.language.mechanics.php/1", evidence_schema: "source-mechanics/v1", coverage_profile: "php-mechanics/v1" },
+  ],
   index: {
     phase: "file.extract",
     scope: "file",
