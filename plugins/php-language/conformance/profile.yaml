@@ -1,0 +1,21 @@
+schema_version: ce-conformance-profile/v1
+plugin_id: com.atheory-ai.wordpress-demo.php
+suite_version: ce-conformance/v1
+claims:
+  - capability: ce.language.declarations.php/1
+    coverage_profile: php-declarations/v1
+  - capability: ce.language.references.php/1
+    coverage_profile: php-references/v1
+  - capability: ce.language.calls.php/1
+    coverage_profile: php-calls-static/v1
+  - capability: ce.language.mechanics.php/1
+    coverage_profile: php-mechanics/v1
+fixtures:
+  root: ./conformance
+  expected: ./conformance/expected
+gates:
+  lifecycle: required
+  determinism: required
+  provenance: required
+  performance: required
+worker_counts: [1, 2, 4, 8]

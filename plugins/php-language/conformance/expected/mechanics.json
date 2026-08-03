@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "ce-conformance-expected/v1",
+  "fixture": "../mechanics/flow.php",
+  "coverage": [
+    {
+      "capability": "ce.language.mechanics.php/1",
+      "status": "complete",
+      "coverageProfile": "php-mechanics/v1",
+      "inspected": true,
+      "minimumObserved": 4
+    }
+  ]
+}
