@@ -1,0 +1,33 @@
+{
+  "schema_version": "ce-conformance-mutations/v1",
+  "cases": [
+    {
+      "id": "move-call-offset",
+      "fixture": "../calls/calls.php",
+      "mutation": "insert_leading_comment",
+      "assert": "targeted_equals_full"
+    },
+    {
+      "id": "rename-helper",
+      "fixture": "../calls/calls.php",
+      "mutation": "rename_symbol",
+      "from": "helper",
+      "to": "normalize_value",
+      "assert": ["targeted_equals_full", "old_identity_absent"]
+    },
+    {
+      "id": "literal-include-to-dynamic",
+      "fixture": "../references/imports.php",
+      "mutation": "replace",
+      "from": "__DIR__ . '/bootstrap.php'",
+      "to": "$bootstrapPath",
+      "assert": ["targeted_equals_full", "old_resolution_absent", "dynamic_outcome_present"]
+    },
+    {
+      "id": "delete-source",
+      "fixture": "../declarations/classes.php",
+      "mutation": "delete_file",
+      "assert": ["targeted_equals_full", "source_contribution_absent"]
+    }
+  ]
+}
