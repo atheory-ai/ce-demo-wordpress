@@ -19,7 +19,7 @@ export default definePlugin({
     { capability: "ce.framework.state.wordpress/1", evidence_schema: "semantic-occurrences/v1", coverage_profile: "wordpress-state/v1" },
   ],
   dependencies: {
-    plugins: ["com.atheory-ai.wordpress-demo.php"],
+    plugins: ["com.atheory-ai.php"],
   },
   index: {
     phase: "file.decorate",

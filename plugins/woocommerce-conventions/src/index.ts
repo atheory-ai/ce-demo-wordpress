@@ -18,7 +18,7 @@ export default definePlugin({
   ],
   dependencies: {
     plugins: [
-      "com.atheory-ai.wordpress-demo.php",
+      "com.atheory-ai.php",
       "com.atheory-ai.wordpress-demo.conventions",
     ],
   },

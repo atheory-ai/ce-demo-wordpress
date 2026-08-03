@@ -4,10 +4,10 @@
 Prompt: How do I build and validate the WordPress demo's CE plugins?
 Success criteria:
   - Uses the published CE plugin SDK dependency
-  - Requires building the demo-owned PHP grammar with its pinned toolchain and
-    fixture validation
+  - Requires a CE build with the certified first-party PHP provider
+  - Builds only the demo-owned framework plugins and validates the tiny fixture
   - Uses CE plugin validation before source-constellation indexing
-  - Does not claim that every CE installation provides PHP semantic verification
+  - Does not duplicate or override PHP parsing in the demo
 
 ## Validation: Model dynamic framework behavior safely
 Prompt: My new plugin sees a hook name in PHP source but cannot resolve the callback at runtime. What IIR coverage should it emit?

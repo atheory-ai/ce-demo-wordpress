@@ -21,8 +21,6 @@ done
 
 printf '\nDemo plugin artifacts:\n'
 for artifact in \
-  plugins/php-language/dist/php-language.wasm \
-  plugins/php-language/dist/php-grammar.wasm \
   plugins/wordpress-conventions/dist/wordpress-conventions.wasm
 do
   if [ -f "$root/$artifact" ]; then

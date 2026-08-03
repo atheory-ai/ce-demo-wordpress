@@ -30,12 +30,6 @@ importers:
         specifier: ^0.5.0
         version: 0.5.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
 
-  php-language:
-    dependencies:
-      '@atheory-ai/ce-plugin-sdk':
-        specifier: ^0.5.0
-        version: 0.5.0(@atheory-ai/wasm-plugin-toolkit@0.0.4(esbuild@0.21.5))
-
   woocommerce-conventions:
     dependencies:
       '@atheory-ai/ce-plugin-sdk':

@@ -33,18 +33,17 @@ plugins:
   # includes semantic-policy plugins which have no file extension to discover.
   # Manifest dependencies still determine execution order.
   enabled:
-    - com.atheory-ai.wordpress-demo.php
+    - com.atheory-ai.php
     - com.atheory-ai.wordpress-demo.conventions
     - com.atheory-ai.wordpress-demo.woocommerce-conventions
     - com.atheory-ai.wordpress-demo.gutenberg-conventions
     - com.atheory-ai.typescript
     - com.atheory-ai.python
   installed:
-    # Build these demo-owned artifacts first: `cd plugins && pnpm install && pnpm build`.
-    # PHP Language supplies the CST parser; the convention plugin adds WordPress
-    # facts from that same parsed tree. The semantic policy plugins turn
+    # Build these demo-owned framework artifacts first: `cd plugins && pnpm install && pnpm build`.
+    # CE's certified PHP default supplies the CST parser; the convention plugin
+    # adds WordPress facts from that same parsed tree. The policy plugins turn
     # evidence-backed IIR tags into framework-specific implementation contracts.
-    - path: ./plugins/php-language/dist/php-language.wasm
     - path: ./plugins/wordpress-conventions/dist/wordpress-conventions.wasm
     - path: ./plugins/woocommerce-conventions/dist/woocommerce-conventions.wasm
     - path: ./plugins/gutenberg-conventions/dist/gutenberg-conventions.wasm

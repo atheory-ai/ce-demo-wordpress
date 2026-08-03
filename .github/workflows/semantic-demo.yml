@@ -32,10 +32,10 @@ jobs:
 
       - name: Install Context Engine release
         env:
-          CE_VERSION: 0.6.0
+          CE_VERSION: 0.7.0
           CE_INSTALL_DIR: ${{ github.workspace }}/.tools
         run: |
-          curl -fsSL https://raw.githubusercontent.com/atheory-ai/context-engine/v0.6.0/install.sh | sh
+          curl -fsSL "https://raw.githubusercontent.com/atheory-ai/context-engine/v${CE_VERSION}/install.sh" | sh
           .tools/ce version
 
       - name: Install production plugin compiler
@@ -44,30 +44,10 @@ jobs:
           pnpm run toolchain:install
           echo "$PWD/.tools/extism/bin" >> "$GITHUB_PATH"
 
-      - name: Set up Go and Zig for the demo-owned PHP grammar
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.24.3
-          cache: false
-
-      - uses: mlugg/setup-zig@v2
-        with:
-          version: 0.13.0
-
-      - name: Fetch pinned tree-sitter source
-        run: |
-          deps_dir="$RUNNER_TEMP/tree-sitter-source"
-          mkdir -p "$deps_dir"
-          cd "$deps_dir"
-          go mod init example.com/ce-wordpress-demo-grammar
-          go mod download github.com/malivvan/tree-sitter@v0.0.1
-
-      - name: Build and test demo plugins
+      - name: Build and test demo framework plugins
         working-directory: plugins
         run: |
           pnpm install --frozen-lockfile
-          TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.0.1/src" \
-            pnpm --filter php-language-plugin run build:grammar
           pnpm test
           pnpm build
 

@@ -1,5 +1,4 @@
 packages:
-  - "php-language"
   - "wordpress-conventions"
   - "woocommerce-conventions"
   - "gutenberg-conventions"

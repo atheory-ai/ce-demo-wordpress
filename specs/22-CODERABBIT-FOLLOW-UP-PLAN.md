@@ -10,15 +10,18 @@ release.
 
 All three workstreams below are implemented on the semantic-composition branch;
 their regression coverage and documentation changes ship with the follow-up.
+The hardened PHP implementation was subsequently promoted to CE's first-party
+`sdk/plugins/php-language` package; the demo now consumes that certified default
+and no longer carries the historical path named below.
 
 ## Workstream 1 — PHP structural identity hardening
 
 ### Problem
 
-`plugins/php-language/src/extract.ts` derives a symbol identity from a directory
-and name. A root-level path is truncated by the current directory calculation,
-and same-named symbols in separate files in one directory can collapse to one
-graph node.
+The former `plugins/php-language/src/extract.ts` derived a symbol identity from
+a directory and name. A root-level path is truncated by the current directory
+calculation, and same-named symbols in separate files in one directory can
+collapse to one graph node.
 
 ### Changes
 
@@ -64,8 +67,8 @@ outside `demo/runs`.
 
 1. Add zero-file indexing and failed graph-query states to the guided CE stop
    conditions.
-2. State in the PHP plugin authoring validation that grammar construction is
-   demo-owned and does not imply universal CE PHP semantic verification.
+2. State in the PHP plugin authoring validation which release owns grammar
+   construction and semantic certification (now the CE first-party provider).
 3. Move the TypeScript IIR pilot's negative and inconclusive fixture criteria to
    a future milestone, unless those checked-in fixtures and deterministic CI
    artifacts are added in the same change.

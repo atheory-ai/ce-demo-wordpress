@@ -7,18 +7,17 @@ tags: [sdk, tree-sitter, sandbox, iir]
 
 # WordPress Demo Plugin Authoring
 
-The demo plugins make CE extensible: generic PHP structure belongs in the
-language plugin; WordPress and WooCommerce conventions belong in an additive
-analyzer. Neither should invent runtime facts.
+The demo plugins make CE extensible: generic PHP structure belongs in CE's
+certified first-party language provider; WordPress and WooCommerce conventions
+belong in additive framework analyzers. Neither should invent runtime facts.
 
 ## Build this repository's plugins
 
 1. Run `pnpm install` in `plugins/` using the published SDK dependency.
-2. Build the pinned PHP grammar with Zig 0.13.x and the corpus in
-   `php-language/grammar.lock`.
-3. Run `pnpm test && pnpm build`.
-4. Validate an artifact with `ce plugin validate` and index the tiny fixture
-   before attempting the source constellation.
+2. Use a CE build that includes the certified `com.atheory-ai.php` default.
+3. Run `pnpm test && pnpm build` for the framework plugins.
+4. Validate each framework artifact with `ce plugin validate` and index the
+   tiny fixture before attempting the source constellation.
 
 ## Start a new plugin
 
@@ -40,7 +39,8 @@ ce-sandbox run dist/my-plugin.wasm tests/fixtures/example.php --ce /path/to/ce -
 
 ## Semantic authoring rules
 
-- Parse the CST; do not use regex as evidence for language semantics.
+- Consume CE's host-provided PHP CST and structural contribution; do not
+  duplicate the language parser or use regex as evidence for semantics.
 - Use deterministic SDK node and edge IDs.
 - Attach v1 IIR claims only when the extractor can supply grounded spans and a
   conservative classifier basis.

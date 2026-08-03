@@ -10,9 +10,9 @@ WooCommerce, and optional additional plugin repositories when a demo scenario
 needs more domain complexity.
 
 This `ce` branch is the Context Engine comparison branch. It keeps the same
-source constellation as `main`, then adds CE configuration, a demo-owned PHP
-language plugin, a WordPress/WooCommerce convention plugin, reproducible CE
-scripts, a bounded IIR walkthrough, and Skillex process guidance.
+source constellation as `main`, then adds CE configuration, framework-specific
+WordPress/WooCommerce/Gutenberg plugins on CE's certified PHP provider,
+reproducible CE scripts, a bounded IIR walkthrough, and Skillex process guidance.
 
 ## What This Demo Should Prove
 
@@ -96,7 +96,8 @@ first demo is source-understanding only.
 
 The CE branch provides an ordered PHP composition:
 
-- `plugins/php-language` parses PHP and emits structural file, namespace,
+- CE's certified `com.atheory-ai.php` default parses PHP and emits structural
+  file, namespace,
   class, method, function, and import facts plus generic language-semantic
   heritage evidence and explicit coverage.
 - `plugins/wordpress-conventions` is a declared `file.decorate` plugin: CE
@@ -110,26 +111,20 @@ The CE branch provides an ordered PHP composition:
   WordPress, so any future CE-owned project callback is scheduled after those
   foundations as well.
 
-Prerequisites are Node 22+, pnpm, Go, and Zig 0.13.x. The demo installs the
+Prerequisites are Node 22+ and pnpm. The demo installs the
 pinned [Extism JavaScript PDK](https://github.com/extism/js-pdk) compiler and
 its Binaryen tools into `plugins/.tools/extism`; no global compiler or separate
-SDK checkout is required. The grammar must use the
-tree-sitter corpus pinned by CE (`github.com/malivvan/tree-sitter@v0.0.1`), whose
-PHP grammar has language ABI 14. Newer upstream PHP grammars currently emit ABI
-15 and are incompatible with CE's embedded tree-sitter core.
+SDK checkout is required. CE owns and certifies the pinned PHP grammar; this
+demo neither compiles nor overrides it.
 
 This demo release requires the CE release containing `core.semantics/v1` and
-the published `@atheory-ai/ce-plugin-sdk` `^0.8.0`. The PHP grammar is
-still a demo-owned side module, intentionally built from the pinned ABI-14
-corpus below.
+the published `@atheory-ai/ce-plugin-sdk` `^0.8.0` and a CE build that embeds
+the certified `com.atheory-ai.php` default provider.
 
 ```sh
 cd plugins
 pnpm install
 pnpm run toolchain:install
-TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.0.1/src" \
-  ZIG=/path/to/zig-0.13 \
-  pnpm --filter php-language-plugin run build:grammar
 pnpm test
 pnpm build
 cd ..

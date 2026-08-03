@@ -10,8 +10,8 @@ demo repository. Use CE to understand the codebase.
 - `demo/tasks/` - benchmark tasks
 - `demo/report-template.md` - run report template
 - `specs/` - benchmark design notes
-- `plugins/php-language/` - demo-owned structural PHP plugin
-- `plugins/wordpress-conventions/` - additive WordPress/WooCommerce facts
+- CE's embedded `com.atheory-ai.php` provider - certified structural PHP facts
+- `plugins/wordpress-conventions/` - additive WordPress framework facts
 
 Do not require a running WordPress site, database, browser, PHP server, or Node
 dev server unless a task explicitly asks for runtime validation. The primary
@@ -59,15 +59,12 @@ Recommended local setup:
 cd plugins
 pnpm install
 pnpm run toolchain:install
-TREE_SITTER_SOURCE_DIR="$(go env GOMODCACHE)/github.com/malivvan/tree-sitter@v0.0.1/src" \
-  ZIG=/path/to/zig-0.13 \
-  pnpm --filter php-language-plugin run build:grammar
 pnpm test && pnpm build
 ```
 
-Run the small fixture before the corpus. It must report one indexed file with
-both structural and convention facts (currently 11 nodes, 10 edges), and no
-write-buffer warnings:
+Run the small fixture before the corpus. It must report one indexed file with a
+non-empty graph plus framework semantic entities, occurrences, and
+relationships, and no write-buffer warnings:
 
 ```bash
 mkdir -p /tmp/ce-wordpress-demo-data
@@ -75,11 +72,9 @@ mkdir -p /tmp/ce-wordpress-demo-data
   index demo/fixtures/php-iir --full
 ```
 
-Use Zig 0.13.x and the CE-pinned tree-sitter corpus only. The grammar source
-and toolchain requirements are recorded in `plugins/php-language/grammar.lock`.
-The demo uses the published CE plugin SDK. The PHP grammar remains demo-owned:
-building it is part of this repository's setup, not a claim that every CE
-installation ships PHP semantic verification.
+The demo uses the published CE plugin SDK for its framework plugins. PHP and
+its pinned grammar are built, certified, and shipped by CE itself; the demo
+declares that provider as a dependency and does not rebuild or override it.
 
 ## Capability Boundaries
 
