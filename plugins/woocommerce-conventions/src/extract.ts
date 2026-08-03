@@ -10,7 +10,7 @@ const STORE_API_APIS = new Set([
 const ACTION_SCHEDULER_APIS = new Set(["as_schedule_single_action", "as_schedule_recurring_action", "as_schedule_cron_action", "as_enqueue_async_action"])
 const CART_EFFECTS = new Set(["add_to_cart", "remove_cart_item", "set_quantity", "empty_cart", "apply_coupon", "remove_coupon", "calculate_totals"])
 const ORDER_EFFECTS = new Set(["save", "delete", "update_status", "set_status", "payment_complete", "add_order_note", "refund"])
-const CAPABILITIES = ["woocommerce.hooks", "woocommerce.checkout_fields", "woocommerce.store_api_extensions", "woocommerce.scheduled_actions", "woocommerce.cart_effects", "woocommerce.order_lifecycle"]
+const CAPABILITIES = ["woocommerce.hooks", "woocommerce.checkout_fields", "woocommerce.store_api_extensions", "woocommerce.scheduled_actions", "woocommerce.cart_effects", "woocommerce.order_lifecycle", "woocommerce.persistence_boundaries"]
 
 export const extract = (
   _filePath: string,
@@ -53,6 +53,32 @@ export const extract = (
     if (call.type === "function_call_expression") extractFunctionCall(call, nodes, emit)
     if (call.type === "member_call_expression") extractMemberCall(call, emit)
   })
+  for (const occurrence of contribution?.evidence?.semantics ?? []) {
+    if (!occurrence.kind.startsWith("wordpress.state_") || !occurrence.entity_kind || !occurrence.entity_key || !isWooCommerceStateKey(occurrence.entity_key)) continue
+    const operation = occurrence.kind.slice("wordpress.state_".length)
+    if (operation !== "read" && operation !== "write" && operation !== "delete") continue
+    const current = counts.get("woocommerce.persistence_boundaries") ?? { observed: 0, unresolved: 0 }
+    current.observed++
+    counts.set("woocommerce.persistence_boundaries", current)
+    ;(evidence.semantics ??= []).push(semanticOccurrence({
+      producer: PRODUCER,
+      kind: `woocommerce.state_${operation}`,
+      entityKind: occurrence.entity_kind,
+      entityKey: occurrence.entity_key,
+      label: `WooCommerce ${operation} ${occurrence.entity_key}`,
+      status: "resolved",
+      confidence: "high",
+      evidenceSource: "wordpress-state-contract/v1",
+      startByte: occurrence.start_byte,
+      endByte: occurrence.end_byte,
+      enclosingStartByte: occurrence.enclosing_start_byte,
+      properties: { domain: "woocommerce", operation, upstream_kind: occurrence.kind, ...(occurrence.properties ?? {}) },
+      // WordPress owns the mechanics-derived state effect. This occurrence is
+      // a domain classification of that fact, not a second read/write/delete
+      // effect, so CE does not double-count one physical call site.
+      relationships: [semanticRelationship("classifies_state", { entity_kind: occurrence.entity_kind, entity_key: occurrence.entity_key }, { method: "woocommerce-owned-state-key", confidence: "high" })],
+    }))
+  }
   evidence.semantic_coverage = CAPABILITIES.map((capability) => {
     const current = counts.get(capability) ?? { observed: 0, unresolved: 0 }
     return semanticCoverage(PRODUCER, capability, current.observed === 0 ? "not_applicable" : current.unresolved === 0 ? "complete" : "partial", {
@@ -173,3 +199,4 @@ function entries(node: SyntaxNode | undefined): Record<string, string> {
 }
 function wooLifecycle(hook: string): string { if (hook.includes("checkout")) return "checkout"; if (hook.includes("cart")) return "cart"; if (hook.includes("order")) return "order"; if (hook.includes("product")) return "product"; return "woocommerce.runtime" }
 function orderLifecycle(method: string): string { if (method === "payment_complete") return "order.payment_complete"; if (method.includes("status")) return "order.status_transition"; if (method === "save") return "order.persist"; if (method === "delete") return "order.delete"; return "order.mutate" }
+function isWooCommerceStateKey(key: string): boolean { return /^(?:_?woocommerce_|_?wc_)/i.test(key) }

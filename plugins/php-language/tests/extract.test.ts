@@ -11,6 +11,12 @@ function node(type: string, text = "", fieldName: string | null = null, children
   return { type, text, fieldName, isNamed: true, startByte: 0, endByte: 0, startPosition: { row: 0, column: 0 }, endPosition: { row: 0, column: 0 }, children }
 }
 
+function at(value: SyntaxNode, startByte: number, endByte: number): SyntaxNode {
+  value.startByte = startByte
+  value.endByte = endByte
+  return value
+}
+
 describe("PHP structural extraction", () => {
   it("extracts declarations, inheritance, methods, and raw namespace references from the CST", () => {
     const tree = node("program", "", null, [
@@ -76,6 +82,50 @@ describe("PHP structural extraction", () => {
     })
     expect(result.evidence?.call_scopes).toHaveLength(2)
     expect(result.edges.some((item) => item.type === "calls")).toBe(false)
+  })
+
+  it("emits compact arguments, assignments, results, and control dependencies", () => {
+    const read = at(node("function_call_expression", "get_user_meta($user, '_cart_marker', true)", null, [
+      node("name", "get_user_meta", "function"),
+      node("arguments", "", "arguments", [
+        at(node("variable_name", "$user"), 34, 39),
+        at(node("string", "'_cart_marker'"), 41, 55),
+        at(node("boolean", "true"), 57, 61),
+      ]),
+    ]), 20, 62)
+    const assignment = at(node("assignment_expression", "$merge = get_user_meta($user, '_cart_marker', true)", null, [
+      at(node("variable_name", "$merge", "left"), 10, 16),
+      { ...read, fieldName: "right" },
+    ]), 10, 62)
+    const remove = at(node("function_call_expression", "delete_user_meta($user, '_cart_marker')", null, [
+      node("name", "delete_user_meta", "function"),
+      node("arguments", "", "arguments", [at(node("variable_name", "$user"), 90, 95), at(node("string", "'_cart_marker'"), 97, 111)]),
+    ]), 72, 112)
+    const branch = at(node("if_statement", "if ($merge) { delete_user_meta($user, '_cart_marker'); }", null, [
+      at(node("variable_name", "$merge", "condition"), 65, 71),
+      at(node("compound_statement", "", "body", [remove]), 72, 114),
+    ]), 63, 114)
+    const callable = at(node("function_definition", "", null, [
+      node("name", "load_cart", "name"),
+      node("formal_parameters", "", "parameters", [node("variable_name", "$user")]),
+      at(node("compound_statement", "", "body", [assignment, branch]), 8, 120),
+    ]), 0, 120)
+
+    const evidence = extract("src/cart.php", "<?php", node("program", "", null, [callable])).evidence
+    const readCall = evidence?.calls?.find((call) => call.callee_expression === "get_user_meta")
+    const deleteCall = evidence?.calls?.find((call) => call.callee_expression === "delete_user_meta")
+    expect(readCall).toMatchObject({
+      arguments: expect.arrayContaining([
+        expect.objectContaining({ kind: "parameter", symbol: "$user" }),
+        expect.objectContaining({ kind: "literal", literal: "_cart_marker" }),
+      ]),
+      result: expect.objectContaining({ kind: "local", symbol: "$merge" }),
+    })
+    expect(evidence?.value_flows).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "assignment", source: expect.objectContaining({ kind: "call_result" }), target: expect.objectContaining({ symbol: "$merge" }) }),
+    ]))
+    expect(evidence?.controls?.[0]).toMatchObject({ kind: "if", condition: expect.objectContaining({ symbol: "$merge" }) })
+    expect(deleteCall?.control_ids).toEqual([evidence?.controls?.[0]?.id])
   })
 
   it("preserves static class calls through a use alias for host resolution", () => {

@@ -45,4 +45,33 @@ describe("WooCommerce convention extraction", () => {
     expect(result.evidence?.semantics?.[0]).toMatchObject({ kind: "woocommerce.hook_registration", entity_key: "woocommerce_checkout_process" })
     expect(result.evidence?.semantics?.[0].relationships).toEqual(expect.arrayContaining([expect.objectContaining({ relation: "subscribes_with", status: "resolved" })]))
   })
+
+  it("classifies WooCommerce-owned state while reusing WordPress resource identity", () => {
+    const result = extract("plugins/commerce.php", "", node("program"), undefined, {
+      nodes: [],
+      edges: [],
+      evidence: {
+        semantics: [{
+          producer: "com.atheory-ai.wordpress-demo.conventions",
+          kind: "wordpress.state_write",
+          entity_kind: "wordpress.user_meta",
+          entity_key: "_woocommerce_load_saved_cart_after_login",
+          label: "write login marker",
+          status: "resolved",
+          properties: { api: "update_user_meta" },
+          enclosing_start_byte: 10,
+          start_byte: 20,
+          end_byte: 40,
+        }],
+      },
+    })
+    expect(result.evidence?.semantics?.[0]).toMatchObject({
+      kind: "woocommerce.state_write",
+      entity_kind: "wordpress.user_meta",
+      entity_key: "_woocommerce_load_saved_cart_after_login",
+      label: "WooCommerce write _woocommerce_load_saved_cart_after_login",
+      relationships: [{ relation: "classifies_state", target: { entity_kind: "wordpress.user_meta", entity_key: "_woocommerce_load_saved_cart_after_login" } }],
+    })
+    expect(result.evidence?.semantic_coverage?.find((item) => item.capability === "woocommerce.persistence_boundaries")).toMatchObject({ status: "complete", observed: 1 })
+  })
 })

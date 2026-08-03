@@ -10,7 +10,7 @@ export default definePlugin({
     phase: "file.extract",
     scope: "file",
     requires: ["artifact:source", "artifact:cst:php"],
-    provides: ["language:php", "cst:php", "facts:php-structure", "references:php-file", "references:php-namespace", "calls:php-static"],
+    provides: ["language:php", "cst:php", "facts:php-structure", "references:php-file", "references:php-namespace", "calls:php-static", "mechanics:php:v1"],
   },
   language: {
     extensions: [".php", ".phtml"],

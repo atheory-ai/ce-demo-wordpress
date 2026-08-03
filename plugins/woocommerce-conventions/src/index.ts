@@ -21,8 +21,8 @@ export default definePlugin({
   index: {
     phase: "file.decorate",
     scope: "file",
-    requires: ["artifact:source", "artifact:cst:php", "facts:php-structure", "framework:wordpress"],
-    provides: ["framework:woocommerce"],
+    requires: ["artifact:source", "artifact:cst:php", "facts:php-structure", "mechanics:php:v1", "framework:wordpress", "semantics:wordpress-state"],
+    provides: ["framework:woocommerce", "semantics:woocommerce-state"],
     enriches: ["php"],
   },
   semanticPolicies: {

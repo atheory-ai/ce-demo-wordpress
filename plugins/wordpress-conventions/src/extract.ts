@@ -1,5 +1,6 @@
 import { childByField, firstDescendantByType, semanticCoverage, semanticOccurrence, semanticRelationship, structuralEntity, unresolvedSemanticRelationship, walk } from "@atheory-ai/ce-plugin-sdk"
 import type { ExtractionResult, Node, RawEvidence, RawSemanticRelationshipEvidence, SemanticResolutionStatus, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
+import { extractWordPressStateEffects, WORDPRESS_STATE_CAPABILITIES } from "./state-effects.js"
 
 const HOOK_APIS = new Set([
   "add_action", "add_filter", "remove_action", "remove_filter",
@@ -36,7 +37,7 @@ export const extract = (
   const capabilities = new Map<string, { observed: number; unresolved: number }>()
   const declaredCapabilities = ["wordpress.hooks", "wordpress.rest_routes", "wordpress.shortcodes", "wordpress.cron", "gutenberg.blocks", "wordpress.security_boundaries"]
   if (!tree) {
-    evidence.semantic_coverage = declaredCapabilities.map((capability) => semanticCoverage("com.atheory-ai.wordpress-demo.conventions", capability, "unavailable", { reason: "No PHP CST was available." }))
+    evidence.semantic_coverage = [...declaredCapabilities, ...WORDPRESS_STATE_CAPABILITIES].map((capability) => semanticCoverage("com.atheory-ai.wordpress-demo.conventions", capability, "unavailable", { reason: "No PHP CST was available." }))
     return { nodes: [], edges: [], evidence }
   }
 
@@ -75,6 +76,9 @@ export const extract = (
     }
   })
 
+  const stateEffects = extractWordPressStateEffects(contribution)
+  ;(evidence.semantics ??= []).push(...stateEffects.semantics)
+
   evidence.semantic_coverage = declaredCapabilities.map((capability) => {
     const counts = capabilities.get(capability) ?? { observed: 0, unresolved: 0 }
     return semanticCoverage(
@@ -83,7 +87,7 @@ export const extract = (
       counts.observed === 0 ? "not_applicable" : counts.unresolved === 0 ? "complete" : "partial",
       { observed: counts.observed, emitted: counts.observed, unresolved: counts.unresolved },
     )
-  })
+  }).concat(stateEffects.coverage)
   return { nodes: [], edges: [], evidence }
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { extract } from "../src/extract.js"
-import type { SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
+import type { ExtractionResult, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
 
 Object.assign(globalThis, {
   __ce_node_id: (_projectID: string, type: string, canonicalID: string) => `${type}:${canonicalID}`,
@@ -27,6 +27,61 @@ function array(entries: SyntaxNode[]): SyntaxNode {
 }
 
 describe("WordPress convention extraction", () => {
+  it("maps generic persistence APIs to one canonical state resource without fixture-key rules", () => {
+    const literal = (expression: string, value: string) => ({ kind: "literal" as const, expression, literal: value, start_byte: 1, end_byte: 2 })
+    const local = (symbol: string) => ({ kind: "local" as const, expression: symbol, symbol, start_byte: 1, end_byte: 2 })
+    const contribution: ExtractionResult = {
+      nodes: [
+        { id: "writer", type: "symbol", label: "wc_user_logged_in", canonicalID: "wc-user.php:global:function:wc_user_logged_in", sourceClass: "structural", properties: { start_byte: 10 } },
+        { id: "reader", type: "symbol", label: "Cart.get_cart", canonicalID: "cart.php:global:method:Cart.get_cart", sourceClass: "structural", properties: { start_byte: 100 } },
+      ],
+      edges: [],
+      evidence: {
+        calls: [
+          { caller_node_id: "writer", callee_expression: "update_user_meta", kind: "local", language: "php", arguments: [local("$user_id"), literal("'_woocommerce_load_saved_cart_after_login'", "_woocommerce_load_saved_cart_after_login"), literal("1", "1")], start_byte: 20, end_byte: 50 },
+          { caller_node_id: "reader", callee_expression: "get_user_meta", kind: "local", language: "php", arguments: [local("$user_id"), literal("'_woocommerce_load_saved_cart_after_login'", "_woocommerce_load_saved_cart_after_login"), literal("true", "true")], result: local("$merge_saved_cart"), start_byte: 120, end_byte: 150 },
+          { caller_node_id: "reader", callee_expression: "delete_user_meta", kind: "local", language: "php", arguments: [local("$user_id"), literal("'_woocommerce_load_saved_cart_after_login'", "_woocommerce_load_saved_cart_after_login")], control_ids: ["merge-branch"], start_byte: 180, end_byte: 210 },
+        ],
+        controls: [{ id: "merge-branch", caller_node_id: "reader", kind: "if", condition: local("$merge_saved_cart"), start_byte: 155, end_byte: 220, body_start_byte: 170, body_end_byte: 220 }],
+      },
+    }
+
+    const result = extract("cart.php", "", node("program"), undefined, contribution)
+    const effects = result.evidence?.semantics?.filter((item) => item.entity_kind === "wordpress.user_meta") ?? []
+    expect(effects).toHaveLength(3)
+    expect(new Set(effects.map((item) => item.entity_key))).toEqual(new Set(["_woocommerce_load_saved_cart_after_login"]))
+    expect(effects.map((item) => item.relationships?.[0]?.relation)).toEqual(["writes_state", "reads_state", "deletes_state"])
+    expect(effects.find((item) => item.kind === "wordpress.state_read")?.properties).toMatchObject({
+      result_symbol: "$merge_saved_cart",
+      guards_control_ids: "merge-branch",
+    })
+    expect(effects.find((item) => item.kind === "wordpress.state_delete")?.properties?.control_ids).toBe("merge-branch")
+    expect(result.evidence?.semantic_coverage?.find((item) => item.capability === "wordpress.state.user_meta")).toMatchObject({ status: "complete", observed: 3, emitted: 3 })
+  })
+
+  it("retains computed persistence keys and reports partial state coverage", () => {
+    const contribution: ExtractionResult = {
+      nodes: [{ id: "caller", type: "symbol", label: "load", canonicalID: "dynamic.php:global:function:load", sourceClass: "structural", properties: { start_byte: 1 } }],
+      edges: [],
+      evidence: { calls: [{ caller_node_id: "caller", callee_expression: "get_option", kind: "local", language: "php", arguments: [{ kind: "local", expression: "$option_name", symbol: "$option_name", start_byte: 10, end_byte: 22 }], start_byte: 5, end_byte: 24 }] },
+    }
+    const result = extract("dynamic.php", "", node("program"), undefined, contribution)
+    expect(result.evidence?.semantics?.find((item) => item.kind === "wordpress.state_read")).toMatchObject({ status: "dynamic", entity_key: undefined, relationships: [{ relation: "reads_state", status: "dynamic", expression: "$option_name" }] })
+    expect(result.evidence?.semantic_coverage?.find((item) => item.capability === "wordpress.state.options")?.status).toBe("partial")
+  })
+
+  it("uses the network option argument order rather than the site option signature", () => {
+    const literal = (expression: string, value: string) => ({ kind: "literal" as const, expression, literal: value, start_byte: 1, end_byte: 2 })
+    const local = (symbol: string) => ({ kind: "local" as const, expression: symbol, symbol, start_byte: 1, end_byte: 2 })
+    const contribution: ExtractionResult = {
+      nodes: [{ id: "caller", type: "symbol", label: "save", canonicalID: "network.php:global:function:save", sourceClass: "structural", properties: { start_byte: 1 } }],
+      edges: [],
+      evidence: { calls: [{ caller_node_id: "caller", callee_expression: "update_network_option", kind: "local", language: "php", arguments: [local("$network_id"), literal("'catalog_mode'", "catalog_mode"), local("$enabled")], start_byte: 5, end_byte: 30 }] },
+    }
+    const effect = extract("network.php", "", node("program"), undefined, contribution).evidence?.semantics?.find((item) => item.kind === "wordpress.state_write")
+    expect(effect).toMatchObject({ entity_key: "catalog_mode", properties: { subject_expression: "$network_id", value_expression: "$enabled" } })
+  })
+
   it("models hooks, REST routes, and blocks from function-call CST nodes", () => {
     const tree = node("program", "", null, [
       call("add_action", [node("string", "'woocommerce_checkout_process'"), node("name", "validate_checkout")]),

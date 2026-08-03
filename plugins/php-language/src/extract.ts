@@ -8,12 +8,15 @@ import {
   semanticRelationship,
   sourceCallEvidence,
   sourceCallScopeEvidence,
+  sourceControl,
   sourceReferenceEvidence,
+  sourceValue,
+  sourceValueFlow,
   structuralEntity,
   unresolvedSemanticRelationship,
   walk,
 } from "@atheory-ai/ce-plugin-sdk"
-import type { Edge, ExtractionResult, LanguageDefinition, Node, RawEvidence, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
+import type { Edge, ExtractionResult, LanguageDefinition, Node, RawControlEvidence, RawEvidence, RawValueEvidence, RawValueFlowEvidence, SyntaxNode } from "@atheory-ai/ce-plugin-sdk"
 
 export const extract: LanguageDefinition["extract"] = (filePath, content, tree): ExtractionResult => {
   const nodes: Node[] = []
@@ -110,7 +113,7 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
     node: SyntaxNode,
     className = "",
     namespaceName = "",
-    callScope?: { callerID: string; ownerClass: string; bindings: Map<string, PHPCallBinding> },
+    callScope?: PHPCallScope,
   ): void => {
     switch (node.type) {
       case "namespace_definition": {
@@ -182,10 +185,14 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
           const declarationNamespace = namespaceName || namespaceAtOffset(namespaceDeclarations, node.startByte)
           const id = addSymbol(className ? `${className}.${name}` : name, "method", node, { visibility: visibility(node) }, declarationNamespace)
           addCallScope(node, id, evidence)
+          const mechanics = collectPHPMechanics(node, id)
+          ;(evidence.value_flows ??= []).push(...mechanics.flows)
+          ;(evidence.controls ??= []).push(...mechanics.controls)
           for (const child of node.children ?? []) visit(child, className, declarationNamespace, {
             callerID: id,
             ownerClass: className,
             bindings: callBindings.get(declarationNamespace) ?? new Map<string, PHPCallBinding>(),
+            ...mechanics,
           })
           return
         }
@@ -197,10 +204,14 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
           const declarationNamespace = namespaceName || namespaceAtOffset(namespaceDeclarations, node.startByte)
           const id = addSymbol(name, "function", node, {}, declarationNamespace)
           addCallScope(node, id, evidence)
+          const mechanics = collectPHPMechanics(node, id)
+          ;(evidence.value_flows ??= []).push(...mechanics.flows)
+          ;(evidence.controls ??= []).push(...mechanics.controls)
           for (const child of node.children ?? []) visit(child, className, declarationNamespace, {
             callerID: id,
             ownerClass: "",
             bindings: callBindings.get(declarationNamespace) ?? new Map<string, PHPCallBinding>(),
+            ...mechanics,
           })
           return
         }
@@ -212,17 +223,22 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
         for (const child of node.children ?? []) visit(child, className, namespaceName, undefined)
         return
     }
-    if (callScope) addCall(node, callScope.callerID, callScope.ownerClass, callScope.bindings, evidence)
+    if (callScope) addCall(node, callScope, evidence)
     for (const child of node.children ?? []) visit(child, className, namespaceName, callScope)
   }
 
   visit(tree)
-  evidence.semantic_coverage = [semanticCoverage(
-    "com.atheory-ai.wordpress-demo.php",
-    "language.class_heritage",
-    heritageObserved === 0 ? "not_applicable" : heritageUnresolved === 0 ? "complete" : "partial",
-    { observed: heritageObserved, emitted: heritageObserved, unresolved: heritageUnresolved },
-  )]
+  evidence.semantic_coverage = [
+    semanticCoverage(
+      "com.atheory-ai.wordpress-demo.php",
+      "language.class_heritage",
+      heritageObserved === 0 ? "not_applicable" : heritageUnresolved === 0 ? "complete" : "partial",
+      { observed: heritageObserved, emitted: heritageObserved, unresolved: heritageUnresolved },
+    ),
+    semanticCoverage("com.atheory-ai.wordpress-demo.php", "language.call_arguments", (evidence.calls?.length ?? 0) === 0 ? "not_applicable" : "complete", { observed: evidence.calls?.length ?? 0, emitted: evidence.calls?.length ?? 0 }),
+    semanticCoverage("com.atheory-ai.wordpress-demo.php", "language.value_flow", (evidence.value_flows?.length ?? 0) === 0 ? "not_applicable" : "complete", { observed: evidence.value_flows?.length ?? 0, emitted: evidence.value_flows?.length ?? 0 }),
+    semanticCoverage("com.atheory-ai.wordpress-demo.php", "language.control_flow", (evidence.controls?.length ?? 0) === 0 ? "not_applicable" : "complete", { observed: evidence.controls?.length ?? 0, emitted: evidence.controls?.length ?? 0 }),
+  ]
   return { ...deduplicate(nodes, edges), evidence }
 }
 
@@ -230,6 +246,15 @@ export const extract: LanguageDefinition["extract"] = (filePath, content, tree):
 // host-projected evidence. Structural extraction and call extraction share the
 // same CST walk; nested callables replace (or clear) their enclosing scope.
 type PHPCallBinding = { specifier: string; remoteName: string }
+type PHPCallScope = {
+  callerID: string
+  ownerClass: string
+  bindings: Map<string, PHPCallBinding>
+  parameters: Set<string>
+  flows: RawValueFlowEvidence[]
+  controls: RawControlEvidence[]
+  callResults: Map<number, RawValueEvidence>
+}
 
 function collectPHPCallBindings(
   tree: SyntaxNode,
@@ -295,12 +320,15 @@ function addCallScope(callable: SyntaxNode, callerID: string, evidence: RawEvide
   }))
 }
 
-function addCall(node: SyntaxNode, callerID: string, ownerClass: string, bindings: Map<string, PHPCallBinding>, evidence: RawEvidence): void {
-  const detail = phpCallDetail(node, ownerClass, bindings)
+function addCall(node: SyntaxNode, scope: PHPCallScope, evidence: RawEvidence): void {
+  const detail = phpCallDetail(node, scope.ownerClass, scope.bindings)
   if (!detail) return
+  const controls = scope.controls
+    .filter((control) => control.body_start_byte <= node.startByte && control.body_end_byte >= node.endByte)
+    .sort((left, right) => left.start_byte - right.start_byte)
   ;(evidence.calls ??= []).push(sourceCallEvidence({
     filePath: "",
-    callerID,
+    callerID: scope.callerID,
     calleeExpression: detail.expression,
     language: "php",
     callKind: detail.kind,
@@ -308,7 +336,154 @@ function addCall(node: SyntaxNode, callerID: string, ownerClass: string, binding
     endByte: node.endByte,
     ...(detail.candidateNames.length ? { candidateNames: detail.candidateNames } : {}),
     ...(detail.referenceSpecifier ? { referenceSpecifier: detail.referenceSpecifier } : {}),
+    ...(callArguments(node).length ? { arguments: callArguments(node).map((argument) => phpValue(argument, scope.parameters)) } : {}),
+    ...(callReceiver(node) ? { receiver: phpValue(callReceiver(node)!, scope.parameters) } : {}),
+    ...(scope.callResults.get(node.startByte) ? { result: scope.callResults.get(node.startByte) } : {}),
+    ...(controls.length ? { controlIDs: controls.map((control) => control.id!) } : {}),
   }))
+}
+
+function collectPHPMechanics(callable: SyntaxNode, callerID: string): Pick<PHPCallScope, "parameters" | "flows" | "controls" | "callResults"> {
+  const parameters = new Set<string>()
+  const parameterList = childByField(callable, "parameters") ?? firstDescendantByType(callable, "formal_parameters")
+  if (parameterList) {
+    walk(parameterList, (candidate) => {
+      if (candidate.type === "variable_name" && candidate.text) parameters.add(candidate.text)
+    })
+  }
+  const flows: RawValueFlowEvidence[] = []
+  const controls: RawControlEvidence[] = []
+  const callResults = new Map<number, RawValueEvidence>()
+
+  const visit = (node: SyntaxNode, parentControlID?: string): void => {
+    if (node !== callable && isCallableDeclaration(node.type)) return
+    let activeParent = parentControlID
+    const controlKind = phpControlKind(node.type)
+    if (controlKind) {
+      const conditionNode = childByField(node, "condition") ?? controlCondition(node)
+      const body = childByField(node, "body") ?? (node.children ?? []).find((child) => child.type === "compound_statement")
+      const localID = `control:${callerID}:${node.startByte}:${controlKind}`
+      controls.push({
+        ...sourceControl({
+          callerID,
+          kind: controlKind,
+          condition: conditionNode ? phpValue(conditionNode, parameters) : sourceValue({ kind: "unknown", expression: `<${controlKind}>`, startByte: node.startByte, endByte: node.startByte }),
+          startByte: node.startByte,
+          endByte: node.endByte,
+          bodyStartByte: body?.startByte ?? node.startByte,
+          // Include alternate/else clauses in the controlling statement. The
+          // condition is evidence of control, not a claim about branch truth.
+          bodyEndByte: node.endByte,
+          parentID: parentControlID,
+        }),
+        id: localID,
+      })
+      activeParent = localID
+    }
+
+    if (node.type === "assignment_expression" || node.type === "augmented_assignment_expression") {
+      const children = namedChildren(node)
+      const targetNode = childByField(node, "left") ?? childByField(node, "target") ?? children[0]
+      const sourceNode = childByField(node, "right") ?? childByField(node, "value") ?? children.at(-1)
+      if (targetNode && sourceNode) {
+        const target = phpValue(targetNode, parameters)
+        const calls = descendantCalls(sourceNode)
+        const source = calls.length > 0
+          ? sourceValue({ kind: "call_result", expression: sourceNode.text || calls[0].text || "<call result>", startByte: sourceNode.startByte, endByte: sourceNode.endByte })
+          : phpValue(sourceNode, parameters)
+        const kind = target.kind === "property" ? "property_write" : target.kind === "array_element" ? "array_write" : "assignment"
+        flows.push({
+          ...sourceValueFlow({ callerID, kind, source, target, startByte: node.startByte, endByte: node.endByte }),
+          id: `flow:${callerID}:${node.startByte}:${kind}`,
+        })
+        for (const call of calls) callResults.set(call.startByte, target)
+      }
+    } else if (node.type === "return_statement") {
+      const sourceNode = namedChildren(node)[0]
+      if (sourceNode) {
+        flows.push({
+          ...sourceValueFlow({
+            callerID,
+            kind: "return",
+            source: phpValue(sourceNode, parameters),
+            target: sourceValue({ kind: "expression", expression: "<return>", startByte: node.startByte, endByte: node.startByte }),
+            startByte: node.startByte,
+            endByte: node.endByte,
+          }),
+          id: `flow:${callerID}:${node.startByte}:return`,
+        })
+      }
+    }
+    for (const child of node.children ?? []) visit(child, activeParent)
+  }
+  for (const child of callable.children ?? []) visit(child)
+  return { parameters, flows, controls, callResults }
+}
+
+function isCallableDeclaration(type: string): boolean {
+  return type === "function_definition" || type === "method_declaration" || type === "anonymous_function_creation_expression" || type === "arrow_function"
+}
+
+function phpControlKind(type: string): RawControlEvidence["kind"] | undefined {
+  if (type === "if_statement") return "if"
+  if (type === "else_if_clause") return "elseif"
+  if (type === "else_clause") return "else"
+  if (type === "switch_statement") return "switch"
+  if (["while_statement", "do_statement", "for_statement", "foreach_statement"].includes(type)) return "loop"
+  if (type === "try_statement") return "try"
+  if (type === "catch_clause") return "catch"
+  if (type === "finally_clause") return "finally"
+  return undefined
+}
+
+function controlCondition(node: SyntaxNode): SyntaxNode | undefined {
+  return namedChildren(node).find((child) => !["compound_statement", "else_if_clause", "else_clause", "catch_clause", "finally_clause"].includes(child.type))
+}
+
+function descendantCalls(node: SyntaxNode): SyntaxNode[] {
+  const result: SyntaxNode[] = []
+  const visit = (candidate: SyntaxNode): void => {
+    if (candidate !== node && isCallableDeclaration(candidate.type)) return
+    if (["function_call_expression", "member_call_expression", "scoped_call_expression", "object_creation_expression"].includes(candidate.type)) result.push(candidate)
+    for (const child of candidate.children ?? []) visit(child)
+  }
+  visit(node)
+  return result
+}
+
+function callArguments(call: SyntaxNode): SyntaxNode[] {
+  const argumentsNode = childByField(call, "arguments") ?? (call.children ?? []).find((child) => child.type === "arguments")
+  return namedChildren(argumentsNode).map((argument) => argument.type === "argument" ? namedChildren(argument)[0] ?? argument : argument)
+}
+
+function namedChildren(node: SyntaxNode | undefined | null): SyntaxNode[] {
+  return (node?.children ?? []).filter((child) => child.isNamed)
+}
+
+function callReceiver(call: SyntaxNode): SyntaxNode | undefined {
+  if (call.type !== "member_call_expression" && call.type !== "scoped_call_expression") return undefined
+  return childByField(call, "object") ?? childByField(call, "scope") ?? namedChildren(call)[0]
+}
+
+function phpValue(node: SyntaxNode, parameters: Set<string>): RawValueEvidence {
+  const value = node.type === "argument" ? namedChildren(node)[0] ?? node : node
+  const expression = value.text || `<${value.type}>`
+  const base = { expression, startByte: value.startByte, endByte: value.endByte }
+  if (value.type === "string") return sourceValue({ kind: "literal", ...base, literal: expression.replace(/^(?:'|")|(?:'|")$/g, "") })
+  if (["integer", "float", "boolean", "null"].includes(value.type) || /^(?:true|false|null)$/i.test(expression)) return sourceValue({ kind: "literal", ...base, literal: expression.toLowerCase() })
+  if (value.type === "variable_name") {
+    if (expression === "$this") return sourceValue({ kind: "this", ...base, symbol: expression })
+    return sourceValue({ kind: parameters.has(expression) ? "parameter" : "local", ...base, symbol: expression })
+  }
+  if (value.type === "member_access_expression" || value.type === "scoped_property_access_expression") {
+    const member = childByField(value, "name")?.text ?? namedChildren(value).at(-1)?.text
+    return sourceValue({ kind: "property", ...base, member })
+  }
+  if (value.type === "subscript_expression") return sourceValue({ kind: "array_element", ...base, member: childByField(value, "index")?.text })
+  if (["function_call_expression", "member_call_expression", "scoped_call_expression", "object_creation_expression"].includes(value.type)) return sourceValue({ kind: "call_result", ...base })
+  if (/^(?:self|static|parent)$/i.test(expression)) return sourceValue({ kind: "self", ...base, symbol: expression })
+  if (value.type === "name" || value.type === "qualified_name") return sourceValue({ kind: "class", ...base, symbol: expression })
+  return sourceValue({ kind: "expression", ...base })
 }
 
 function phpCallDetail(node: SyntaxNode, ownerClass: string, bindings: Map<string, PHPCallBinding>): { expression: string; kind: "local" | "imported" | "constructor" | "method" | "dynamic"; candidateNames: string[]; referenceSpecifier?: string } | undefined {

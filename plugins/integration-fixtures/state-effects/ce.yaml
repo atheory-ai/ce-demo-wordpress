@@ -1,0 +1,21 @@
+project:
+  git_url: fixture://wordpress-state-effects
+  base_prompt: WordPress state-effect integration fixture.
+
+plugins:
+  enabled:
+    - com.atheory-ai.wordpress-demo.php
+    - com.atheory-ai.wordpress-demo.conventions
+    - com.atheory-ai.wordpress-demo.woocommerce-conventions
+  installed:
+    - path: ../../php-language/dist/php-language.wasm
+    - path: ../../wordpress-conventions/dist/wordpress-conventions.wasm
+    - path: ../../woocommerce-conventions/dist/woocommerce-conventions.wasm
+
+indexer:
+  include:
+    - "*.php"
+  include_test_files: true
+  parse_workers: 2
+  extract_workers: 2
+  plugin_concurrency: 2
