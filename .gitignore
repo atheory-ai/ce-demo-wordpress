@@ -3,5 +3,6 @@ demo/runs/
 demo/reports/
 .skillex/
 plugins/node_modules/
+plugins/.tools/
 plugins/*/node_modules/
 plugins/*/dist/

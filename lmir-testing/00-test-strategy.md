@@ -22,6 +22,7 @@ The first is executable locally now. The second requires fresh, blinded agent tr
 | H7 | An intent can produce a traceable test plan before implementation. | Generate tests with declared-coverage output 3 times. | Any declared behavior, failure, or effect is unaccounted for, or output varies. |
 | H8 | A configured model can retain the key requirements of a natural-language function request in a valid IIR contract. | Shape one fixed request in 3 independent processes; audit function name, input, return type, failure tag, side-effect declaration, and normalization constraint. | Any response is invalid, omits a required contract field, or invents a conflicting side effect/failure. |
 | H9 | A model-shaped intent must not be described as source-verified until the generated source has a `passed` report. | Run `shape --generate --verify` 3 times and record both exit code and report status. | Tooling or documentation treats `inconclusive` as a verified success. |
+| H10 | CE-guided iterative retrieval improves a smaller model's final source-backed investigation over ordinary source exploration. | Use the same `gpt-5.6-luna` / medium model, task, 16-turn budget, and final-answer rubric in paired runs. The only variable is ordinary `rg`/read tools versus CE graph tools plus CE-cited narrow reads. | CE fails to improve relationship coverage, safe plan/test targeting, or unsupported-claim avoidance across the paired tasks; a latency-only gain does not count. |
 
 All results must be recorded at least three times. This detects accidental stateful behavior, but it is *not* a statistical sample of arbitrary programs.
 
@@ -65,6 +66,45 @@ The deterministic work above tests the mechanism. To test whether it helps peopl
 5. Record CE tool calls, narrow reads, wall time, IIR status, reviewer scores, disagreements, and concrete misses. Compare paired score deltas and inspect disagreements before any aggregate claim.
 
 Success means C improves correctness and policy/testability without increasing unsupported claims. A result is *not* success merely because a candidate is generated or because a tool was used. Report ties, regressions, and tasks where the representation was too narrow.
+
+## Small-model iterative context study (H10)
+
+This is a more focused precursor to the full blinded study. It tests the product
+claim that CE makes a model's *eventual* investigation better, rather than
+claiming a one-shot answer is enough. The repeatable driver is
+`run-agent-comparison.mjs`; it uses the configured OpenAI model directly and
+stores every model/tool turn for audit.
+
+Use three pre-selected cross-package tasks, with three independent paired runs
+of each:
+
+1. Task 04 — REST API to editor stale-data path;
+2. Task 07 — Store API headless cart-merge regression;
+3. Task 01 — block registration and server rendering.
+
+For every pair, hold fixed the source revision, task text, model
+`gpt-5.6-luna`, medium reasoning effort, 12 retrieval turns followed by one
+tool-free final-synthesis turn, and final-answer instructions. The baseline may use normal targeted repository search and
+narrow source reads. The CE condition receives only deterministic CE graph
+tools and narrow reads of paths already cited by a CE response; the harness
+enforces this restriction. Neither condition receives an answer key.
+
+An evaluator who did not drive either run scores the final answer against the
+checked-out source, without seeing the condition label, 0–2 on each dimension:
+
+| Dimension | 0 | 1 | 2 |
+| --- | --- | --- | --- |
+| Causal/relationship accuracy | wrong or disconnected | partly correct | correct cross-package chain with causal ordering |
+| Critical source coverage | misses most anchors | finds some anchors | finds all task-critical source/test/extension anchors |
+| Safe change plan | unsafe or generic | plausible but incomplete | scoped, compatible, and separates fact from runtime hypothesis |
+| Regression-test targeting | missing or irrelevant | partial | names the appropriate focused test surfaces and assertions |
+| Evidence calibration | unsupported claims | mixed evidence/inference | every material claim source-grounded or explicitly uncertain |
+| Retrieval efficiency (diagnostic) | materially impractical | usable | targeted with little irrelevant context |
+
+The primary paired score is the first five dimensions (maximum 10). Tool
+counts, token counts, and elapsed time are retained as diagnostics. A positive
+result requires a consistent gain in the primary score or a concrete avoided
+critical miss across repetitions; an average speedup alone is insufficient.
 
 ## Known limitations and next gates
 
